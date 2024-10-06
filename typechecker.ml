@@ -5,8 +5,6 @@ module Env = Map.Make(String)
 type tenv = typ Env.t
 (* typing environment for constructors *)
 type senv = (typ list * string) Env.t
-
-type exaustive_tree = Emp | Not_Constructed | Nod of (pattern*exaustive_tree) list
 (*
 type tree = E | N of tree*tree
 Env.find "N" senv ==> ([TStruct "tree"; TStruct "tree"], "tree")
@@ -45,9 +43,7 @@ let rec tenv_from_pattern (pat:pattern) (senv:senv) (tenv:tenv) :tenv =
           failwith "multiple variables in the pattern"
         else
         Env.add s t tenv
-      | PCstr(s,lpat) -> 
-        let (lt, type_name) = Env.find s senv in 
-        add_env_list lt lpat senv tenv
+      | PCstr(s,lpat) -> let (lt, type_name) = Env.find s senv in add_env_list lt lpat senv tenv
     in add_env_list ltyp' lpattern' senv new_tenv
   | _ -> failwith "list pattern not good size"
   in
