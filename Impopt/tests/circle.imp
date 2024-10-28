@@ -26,4 +26,5 @@ function affiche_ligne(i, n) {
     putchar(espace);
     j = j+1;
   }
+  putchar(retour);
 }
