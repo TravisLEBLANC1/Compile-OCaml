@@ -8,6 +8,7 @@
 (* Module for variables renamings *)
 module STbl = Map.Make(String)
 
+
 (* Translation of variables
    - named variables are looked up in the renaming table (or accessed
      directly)
@@ -18,7 +19,20 @@ let tr_var v env = match v with
       
   | Clj.CVar(n) ->
     Imp.(array_get (Var "closure") (Int n))
-      
+
+(* translate the varlist from a closure
+   we add all the variable of the list in the closure array Var(var_cl)*)
+let tr_varlist var_cl varlist env = 
+   List.mapi (fun i v -> Imp.array_set (Var var_cl) (Int (i + 1)) (tr_var v env)) varlist
+
+let print_var v = match v with 
+   | Clj.CVar(n) -> Printf.printf "cvar(%d)" n
+   | Clj.Name(s) -> Printf.printf "name(%s)" s
+
+let rec print_varlist varlist = match varlist with
+   | [] -> ()
+   | v::varlist' -> print_var v; Printf.printf ", "; print_varlist varlist'
+
 (* Translation of an expression
 
    Parameters:
@@ -58,12 +72,42 @@ let tr_expr e env =
 
       | Clj.Var(v) ->
          [], tr_var v env
-          
+      
+      | Clj.Unop(Fst, e) ->
+         let is, te = tr_expr e env in 
+         is, Imp.array_get te (Imp.Int 0)
+      | Clj.Unop(Snd, e) ->
+         let is, te = tr_expr e env in 
+         is, Imp.array_get te (Imp.Int 1)
+      | Clj.Unop(op, e) ->
+         let is, te = tr_expr e env in
+         is, Imp.Unop(op, te)
+      
+      | Clj.Binop(Pair, e1, e2) ->
+         let is1, te1 = tr_expr e1 env in
+         let is2, te2 = tr_expr e2 env in
+         let vname = new_var "pair" in 
+         let v = Imp.Var(vname) in
+         is1 @ is2 @ 
+         Imp.([Set(vname, array_create (Int 2))] @
+              [array_set v (Int 1) te2 ] @
+              [array_set v (Int 0) te1 ]
+            ) , v
       | Clj.Binop(op, e1, e2) ->
          let is1, te1 = tr_expr e1 env in
          let is2, te2 = tr_expr e2 env in
          is1 @ is2, Imp.Binop(op, te1, te2)
-          
+      
+      | Clj.If(cond, e1, e2) ->
+         let iscond, tecond = tr_expr cond env in
+         let is1, te1 = tr_expr e1 env in
+         let is2, te2 = tr_expr e2 env in
+         let vname = new_var "if" in
+         iscond @ 
+         [Imp.If(tecond, 
+            is1 @ [Imp.Set(vname, te1)], 
+            is2 @ [Imp.Set(vname, te2)])], Imp.Var(vname) 
+
       | Clj.Let(x, e1, e2) ->
          (* Creation of a unique name for 'x', to be used instead of 'x'
             in the expression e2. *)
@@ -71,9 +115,25 @@ let tr_expr e env =
          let is1, t1 = tr_expr e1 env in
          let is2, t2 = tr_expr e2 (STbl.add x lv env) in
          Imp.(is1 @ [Set(lv, t1)] @ is2, t2)
+      
+      | Clj.MkClj(fun_name, varlist) ->
+         let var_cl = new_var "closure" in 
+         print_string fun_name;
+         print_varlist varlist;
+         print_string "\n";
+         (*je crois qu'il y a un problem du genre le cvar est une ref, et du coup on a les même free variable partout, ou un truc du genre... j'ai envie de le changé en paramètre mais c'est bizzare qu'il l'aie mis du coup*)
+         Imp.([Set(var_cl, array_create (Int (1+List.length varlist)))] @
+              [array_set (Var var_cl) (Int 0) (Addr fun_name)] @
+              tr_varlist var_cl varlist env
+            ), Var var_cl
+         
+      | Clj.App(e1, e2) ->
+         let is1, te1 = tr_expr e1 env in
+         let is2, te2 = tr_expr e2 env in
+         is1 @ is2 , PCall(Deref(Imp.array_get te1 (Int 0)), [te2] @ [te1])
 
       | _ ->
-         failwith "todo"
+         failwith "todo tr_expr into imp"
 
   in
     

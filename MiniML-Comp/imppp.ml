@@ -5,8 +5,8 @@ open Printf
 let pp_unop: unop -> string = function
   | Minus -> "-"
   | Not   -> "!"
-  | Fst   -> "fst"
-  | Snd   -> "snd"
+  | Fst   -> "fst "
+  | Snd   -> "snd "
 
 let pp_binop: binop -> string = function
   | Add -> "+"
