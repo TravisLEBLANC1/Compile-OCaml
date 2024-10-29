@@ -15,15 +15,19 @@ module STbl = Map.Make(String)
    - closure variables generate an array access *)
 let tr_var v env = match v with
   | Clj.Name(x) ->
-    Imp.(if STbl.mem x env then Var(STbl.find x env) else Var x)
+    Imp.(if STbl.mem x env then Var(STbl.find x env) else (print_string (x^" does'nt exist\n"); Var x))
       
   | Clj.CVar(n) ->
     Imp.(array_get (Var "closure") (Int n))
 
+let tr_var' v n env = match v with
+   | Clj.Name(x) -> Imp.(if STbl.mem x env then Var(STbl.find x env) else Imp.(array_get (Var "closure") (Int n)))
+   | _ -> failwith "i don't know anymore"
+
 (* translate the varlist from a closure
    we add all the variable of the list in the closure array Var(var_cl)*)
 let tr_varlist var_cl varlist env = 
-   List.mapi (fun i v -> Imp.array_set (Var var_cl) (Int (i + 1)) (tr_var v env)) varlist
+   List.mapi (fun i v -> Imp.array_set (Var var_cl) (Int (i + 1)) (tr_var' v (i+1) env)) varlist
 
 let print_var v = match v with 
    | Clj.CVar(n) -> Printf.printf "cvar(%d)" n

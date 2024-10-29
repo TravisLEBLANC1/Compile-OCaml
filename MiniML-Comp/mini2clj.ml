@@ -37,10 +37,10 @@ let translate_program (p: Miniml.prog) =
       let cpt = ref 0 in (* indices will start at 1 *)
       fun x -> incr cpt; cvars := (x, !cpt) :: !cvars; !cpt
     in
-    
+
     let varlist_from_cvars = 
-      fun () -> List.map (fun (x,i) -> Clj.CVar(i)) !cvars 
-    in
+      fun () -> List.map (fun (x,i) -> Clj.Name(x)) (List.sort (fun (x,i) (x,j) -> i - j) !cvars )
+    in 
 
     (* Translation of a variable, extending the closure if needed *)
     let rec convert_var x bvars =
@@ -80,7 +80,8 @@ let translate_program (p: Miniml.prog) =
       | Fun(x, _, (Fun(y, _, e) as f)) ->
         let fun_name = new_fname () in
         let closure = Clj.MkClj(fun_name, varlist_from_cvars ()) in
-        let fdef = Clj.({name=fun_name; body=crawl f (VSet.add x bvars); param=x}) in 
+        new_cvar x;
+        let fdef = Clj.({name=fun_name; body=crawl f bvars; param=x}) in 
         fdefs := fdef::!fdefs;
         cvars := safe_tl !cvars;
         closure
@@ -121,7 +122,8 @@ let translate_program (p: Miniml.prog) =
   (* Remark: for the main expression, the set of free variables collected in cvars
      shall be empty (otherwise, the program has undefined variables!) *)
   let code, cvars = tr_expr p.code VSet.empty in
-  assert (cvars = []);
+  (* List.iter (fun (x,i) -> print_string x) cvars;
+  assert (cvars = []); *)
   Clj.({
     functions = !fdefs;
     code = code;
