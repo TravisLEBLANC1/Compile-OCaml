@@ -34,6 +34,7 @@ and sequence = instruction list
    simple pointer arithmetic *)
 let array_access (a: expression) (i: expression): expression =
   (* compute the pointer to index  i  of the array  a  *)
+  if i = Int(0) then a else 
   Binop(Ops.Add, a, Binop(Ops.Mul, i, Int 4))
 let array_get (a: expression) (i: expression): expression =
   (* read operation  a[i]  *)

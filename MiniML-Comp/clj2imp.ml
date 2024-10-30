@@ -20,14 +20,21 @@ let tr_var v env = match v with
   | Clj.CVar(n) ->
     Imp.(array_get (Var "closure") (Int n))
 
-let tr_var' v n env = match v with
-   | Clj.Name(x) -> Imp.(if STbl.mem x env then Var(STbl.find x env) else Imp.(array_get (Var "closure") (Int n)))
-   | _ -> failwith "i don't know anymore"
 
 (* translate the varlist from a closure
-   we add all the variable of the list in the closure array Var(var_cl)*)
-let tr_varlist var_cl varlist env = 
-   List.mapi (fun i v -> Imp.array_set (Var var_cl) (Int (i + 1)) (tr_var' v (i+1) env)) varlist
+   we add all the variable that we know currently in the closure array*)
+let rec tr_varlist var_cl varlist env i = match varlist with
+   | [] -> []
+   | Clj.Name(x)::varlist' -> 
+     Imp.(if STbl.mem x env then 
+            [Imp.array_set (Var var_cl) (Int (i + 1)) (Var(STbl.find x env))] @
+            tr_varlist var_cl varlist' env (i+1) 
+          else 
+            tr_varlist var_cl varlist' env (i+1))
+   | _ -> failwith "for the moment this is not possible"
+
+(* let tr_varlist var_cl varlist env = 
+   List.mapi (fun i v -> Imp.array_set (Var var_cl) (Int (i + 1)) (tr_var v env)) varlist *)
 
 let print_var v = match v with 
    | Clj.CVar(n) -> Printf.printf "cvar(%d)" n
@@ -62,7 +69,6 @@ let tr_expr e env =
     vars := v :: !vars;
     v
   in
-  
   (* Main translation function
      Return the pair (s, e'), and records variable names in vars as a side effect *)
   let rec tr_expr (e: Clj.expression) (env: string STbl.t):
@@ -120,21 +126,34 @@ let tr_expr e env =
          let is2, t2 = tr_expr e2 (STbl.add x lv env) in
          Imp.(is1 @ [Set(lv, t1)] @ is2, t2)
       
-      | Clj.MkClj(fun_name, varlist) ->
+      | Clj.MkClj(fun_name, false, varlist) ->
+         (* case where we need to allocate the closure array*)
          let var_cl = new_var "closure" in 
          print_string fun_name;
+         print_string "false ";
          print_varlist varlist;
          print_string "\n";
-         (*je crois qu'il y a un problem du genre le cvar est une ref, et du coup on a les même free variable partout, ou un truc du genre... j'ai envie de le changé en paramètre mais c'est bizzare qu'il l'aie mis du coup*)
          Imp.([Set(var_cl, array_create (Int (1+List.length varlist)))] @
-              [array_set (Var var_cl) (Int 0) (Addr fun_name)] @
-              tr_varlist var_cl varlist env
+              [array_set (Var var_cl) (Int 0) (Addr fun_name)] @ 
+              tr_varlist var_cl varlist env 0
             ), Var var_cl
-         
+      
+      | Clj.MkClj(fun_name, true, varlist) ->
+         (* case where the closure array is already allocated*)
+         let var_cl = "closure" in
+         print_string fun_name;
+         print_string "true ";
+         print_varlist varlist;
+         print_string "\n";
+         Imp.([array_set (Var var_cl) (Int 0) (Addr fun_name)] @
+               tr_varlist var_cl varlist env 0
+            ), Var var_cl
+
       | Clj.App(e1, e2) ->
-         let is1, te1 = tr_expr e1 env in
+         let is1, te1 = tr_expr e1 env in (* e1 should be a MkClj*)
          let is2, te2 = tr_expr e2 env in
-         is1 @ is2 , PCall(Deref(Imp.array_get te1 (Int 0)), [te2] @ [te1])
+         let tmp = new_var "tmp" in
+         Imp.(is1 @ is2 @ [Set(tmp, te1)], PCall(Deref(Imp.array_get (Var tmp) (Int 0)), [te2] @ [Var tmp]))
 
       | _ ->
          failwith "todo tr_expr into imp"
