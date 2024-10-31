@@ -1,9 +1,9 @@
 function print(arg1, arg2){
     var local1;
-    var local2;
     local1 = arg1 + arg2;
-    local2 =  arg1 * arg2;
-    local1 = local2 + local1;
+    putint(local1);
+    putint(arg1);
+    putint(arg2);
     if (local1 < 10){
         putchar(97);
     }else{
@@ -12,5 +12,5 @@ function print(arg1, arg2){
 }
 
 function main(){
-    print(10,2);
+    print(10,10);
 }

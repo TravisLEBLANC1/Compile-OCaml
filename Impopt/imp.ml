@@ -12,6 +12,7 @@ type expression =
   | Call  of string * expression list
 
 type instruction =
+  | Putint  of expression (*added putint*)
   | Putchar of expression
   | Set     of string * expression
   | If      of expression * sequence * sequence
@@ -83,6 +84,7 @@ let exec_prog prog arg =
       List.iter exec_instr s
 
     and exec_instr = function
+      | Putint e -> print_int (eval_int e)
       | Putchar e -> print_char (char_of_int (eval_int e))
       | Set(id, e) ->
          let v = eval_expr e in

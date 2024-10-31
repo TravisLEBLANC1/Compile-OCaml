@@ -14,7 +14,7 @@ let tmp_regs = [| t0; t1; t2; t3; t4; t5; t6; t7; t8; t9 |]
 let nb_tmp_regs = Array.length tmp_regs
 
 let var_regs = [| s0; s1; s2; s3; s4; s5; s6; s7 |]
-let nb_var_regs = Array.length var_regs
+let nb_var_regs = 3 (*Array.length var_regs - 5*)
 
 let push reg = subi sp sp 4 @@ sw reg 0(sp)
 let pop  reg = lw reg 0(sp) @@ addi sp sp 4
@@ -27,6 +27,15 @@ let restore_tmp = restore tmp_regs
 
 let save_var = save var_regs
 let restore_var = restore var_regs
+
+let print_instr = function 
+  | Putint(_) -> Printf.printf "putint\n"
+  | Putchar(e) -> Printf.printf "puthchar\n"
+  | Expr e ->  Printf.printf "expr\n"
+  | Set(x,e) -> Printf.printf "set\n"
+  | If(_) ->  Printf.printf "if\n"
+  | While(_) ->  Printf.printf "While\n"
+  | Return(_) -> Printf.printf "return\n"
 
 (* explicit allocation information for a local variable *)
 type explicit_alloc =
@@ -66,10 +75,17 @@ let tr_function fdef =
   (* Allocation info for local variables and function parameters *)
   let alloc, r_max, spill_count = allocate_locals fdef in
 
-  (* load the variable id in ti using f = (lw or sw or...) *)
-  let load_variable f (ti:register) (id:explicit_alloc) = match id with
-    | Reg r -> move ti r 
-    | Stack offset -> f ti offset(fp)
+  (* load the variable id in ti*)
+  let load_variable (ti:register) (id:explicit_alloc) = 
+    match id with
+    | Reg r -> move ti r
+    | Stack offset -> lw ti offset(fp)
+  in
+  (* store the variable ti in id*)
+  let store_variable (ti:register) (id:explicit_alloc) = 
+    match id with
+    | Reg r -> move r ti 
+    | Stack offset -> sw ti offset(fp)
   in
   (* Generate Mips code for an Imp expression. The generated code produces the
      result in register $ti, and do not alter registers $tj with j < i. *)
@@ -83,7 +99,7 @@ let tr_function fdef =
     | Bool(b) -> if b then li ti 1 else li ti 0
     | Var(x) -> 
       (match Hashtbl.find_opt alloc x with
-       | Some id -> load_variable lw ti id 
+       | Some id -> load_variable ti id 
        | None -> la ti x @@ lw ti 0(ti)) (* non-local assumed to be a valid global *)
     | Binop(bop, e1, e2) ->
        let op = match bop with
@@ -119,13 +135,14 @@ let tr_function fdef =
   (* Generate MIPS code for an Imp instruction or sequence. *)
   let rec tr_seq = function
     | []   -> nop
-    | i::s -> tr_instr i @@ tr_seq s
+    | i::s -> print_string "next\n"; tr_instr i @@ tr_seq s
 
-  and tr_instr = function
+  and tr_instr i = match i with
+    | Putint(e) -> tr_expr 0 e @@ move a0 t0 @@ li v0 1 @@ syscall
     | Putchar(e) -> tr_expr 0 e @@ move a0 t0 @@ li v0 11 @@ syscall
     | Set(x, e) ->
        let set_code = match Hashtbl.find_opt alloc x with
-         | Some id -> load_variable sw t0 id
+         | Some id -> store_variable t0 id
          | None -> la t1 x @@ sw t0 0(t1)
        in
        tr_expr 0 e @@ set_code

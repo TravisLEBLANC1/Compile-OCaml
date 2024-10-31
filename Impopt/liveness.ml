@@ -22,7 +22,7 @@ let liveness fdef =
   let rec lv_in_instr (i:instruction) lv_out = 
     let s = match i.instr with
       (* by case on the contents of i.instr *)
-      | Putchar e | Expr e -> VSet.union lv_out (use_expr e)
+      | Putint e | Putchar e | Expr e -> VSet.union lv_out (use_expr e)
       | Return e -> use_expr e
       | Set(s, e) -> VSet.union (VSet.remove s lv_out) (use_expr e)
       | If(e, li1, li2) -> 

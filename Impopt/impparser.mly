@@ -13,7 +13,7 @@
 %token <string> IDENT
 %token VAR FUNCTION COMMA
 %token LPAR RPAR BEGIN END SEMI
-%token PUTCHAR SET IF ELSE WHILE RETURN
+%token PUTINT PUTCHAR SET IF ELSE WHILE RETURN
 %token EOF
 
 %left LT
@@ -41,6 +41,7 @@ function_def:
 ;
 
 instruction:
+| PUTINT LPAR e=expression RPAR SEMI { Putint(e) }
 | PUTCHAR LPAR e=expression RPAR SEMI { Putchar(e) }
 | id=IDENT SET e=expression SEMI { Set(id, e) }
 | IF LPAR c=expression RPAR

@@ -10,6 +10,7 @@ type expression = Imp.expression
 (*nb is to have a unique nb for each instr for liveness*)
 type instruction = { nb: int; instr: instr }
 and instr =
+  | Putint  of expression
   | Putchar of expression
   | Set     of string * expression
   | If      of expression * sequence * sequence
@@ -35,7 +36,7 @@ type program = {
  *)
 
 let rec max_instr i = match i.instr with
-    | Putchar _ | Set _ | Expr _ | Return _ -> i.nb
+    | Putint _ | Putchar _ | Set _ | Expr _ | Return _ -> i.nb
     | While(_, is) -> max i.nb (max_instr_list is)
     | If(_, is1, is2) -> max i.nb (max (max_instr_list is1) (max_instr_list is2))
 and max_instr_list = function
@@ -47,6 +48,7 @@ let from_imp_fdef fdef =
   let cpt = ref (-1) in
   let new_lbl () = incr cpt; !cpt in
   let rec from_imp_instr = function
+    | Imp.Putint e  -> { nb = new_lbl(); instr = Putint(e) }
     | Imp.Putchar e -> { nb = new_lbl(); instr = Putchar(e) }
     | Imp.Set(x, e) -> { nb = new_lbl(); instr = Set(x, e) }
     | Imp.Expr e    -> { nb = new_lbl(); instr = Expr(e) }
