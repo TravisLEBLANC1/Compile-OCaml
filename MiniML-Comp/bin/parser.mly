@@ -1,8 +1,8 @@
 %{
 
   open Lexing
-  open Miniml
-  open Ops
+  open Src.Miniml
+  open Src.Ops
 
 %}
 
@@ -37,7 +37,7 @@
 %nonassoc LPAR IDENT INT BOOL
 
 %start program
-%type <Miniml.prog> program
+%type <Src.Miniml.prog> program
 
 %%
 

@@ -13,7 +13,7 @@ in
 let rec size (t: tree): int = match t with
   | E -> 1
   | N(E, E) -> 3
-  | N(N(t1, t2),N(t3, t1)) -> 3 + (size t1) + (size t2) +(size t3) + (size t1) (*multiple variables*)
+  | N(N(t1, t2),N(t3, t1)) -> 3 + (size t1) + (size t2) +(size t3) + (size t1) (*multiple variables same name*)
   | N(t1, t2) -> 1 + (size t1) + (size t2)
 in
 

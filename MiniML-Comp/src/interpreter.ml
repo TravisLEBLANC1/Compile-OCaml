@@ -24,7 +24,7 @@ and print_vlist = function
   | [v] -> print_value v
   | v::vlist -> print_value v; printf ", "; print_vlist vlist
 
-let rec env_from_pattern pat lv env  =
+let env_from_pattern pat lv env  =
   let rec add_env_list lv lp env = match lv, lp with
   | [], [] -> env
   | v::lv', p::lp' -> 
@@ -36,8 +36,8 @@ let rec env_from_pattern pat lv env  =
   | _ -> failwith "list pattern not good size"
   in
   match pat with
-  | PVar s -> failwith "PVar alone in a match"
-  | PCstr(s, lpat) -> add_env_list lv lpat env
+  | PVar _ -> failwith "PVar alone in a match"
+  | PCstr(_, lpat) -> add_env_list lv lpat env
 
 
 let rec pattern_match v pat = 
@@ -109,8 +109,8 @@ let rec eval e env = match e with
     let v = eval e env in 
     begin
     match v with
-      | VCstr(s, lv) ->     
-        let (pat, exp) = List.find (fun (p, e) -> pattern_match v p) lc in
+      | VCstr(_, lv) ->     
+        let (pat, exp) = List.find (fun (p, _) -> pattern_match v p) lc in
         eval exp (env_from_pattern pat lv env)
       | _ -> failwith "not constructor value in match"
     end

@@ -33,7 +33,7 @@ let rec eq_list l1 l2 : bool= match l1, l2 with
 
 
 (*return the environement with the variable inside the match added *)
-let rec tenv_from_pattern (pat:pattern) (senv:senv) (tenv:tenv) :tenv = 
+let tenv_from_pattern (pat:pattern) (senv:senv) (tenv:tenv) :tenv = 
   let rec add_env_list (ltyp:typ list) (lpattern:pattern list) (senv:senv) (tenv:tenv):tenv = match ltyp, lpattern with
   | [], [] -> tenv
   | t::ltyp', p::lpattern' -> 
@@ -43,34 +43,34 @@ let rec tenv_from_pattern (pat:pattern) (senv:senv) (tenv:tenv) :tenv =
           failwith "multiple variables in the pattern"
         else
         Env.add s t tenv
-      | PCstr(s,lpat) -> let (lt, type_name) = Env.find s senv in add_env_list lt lpat senv tenv
+      | PCstr(s,lpat) -> let (lt, _) = Env.find s senv in add_env_list lt lpat senv tenv
     in add_env_list ltyp' lpattern' senv new_tenv
   | _ -> failwith "list pattern not good size"
   in
 
   match pat with
-  | PVar s -> failwith "PVar alone in a match"
+  | PVar _ -> failwith "PVar alone in a match"
   | PCstr(s, lpat) -> 
-    let (lt, type_name) = Env.find s senv in add_env_list lt lpat senv tenv
+    let (lt, _) = Env.find s senv in add_env_list lt lpat senv tenv
 
 let typ_expr (e: expr) (senv: senv) =
   
   (*return the supposed type of the pattern (don't check inside if it's correct)*)
   let rec typ_pattern (pat:pattern) = match pat with
-    | PVar s -> failwith "PVar alone in a match"
-    | PCstr(s, lpat) ->  TStruct(snd @@ Env.find s senv)
+    | PVar _ -> failwith "PVar alone in a match"
+    | PCstr(s, _) ->  TStruct(snd @@ Env.find s senv)
   
   (* return (type of pattern, type of expr), fail if the types are not consistent*)
   and check_case (lcase:case list) tenv : typ*typ = match lcase with
     | [] ->  failwith "type error: match empty"
     | [(p, e)] -> 
       let tp = typ_pattern p in 
-      let te = typ e (Env.union (fun s a b -> Some b) tenv (tenv_from_pattern p senv Env.empty)) in
+      let te = typ e (Env.union (fun _ _ b -> Some b) tenv (tenv_from_pattern p senv Env.empty)) in
       (tp, te)
     | (p,e)::lcase' -> 
       let tp = typ_pattern p in
-      let te = typ e (Env.union (fun s a b -> Some b) tenv (tenv_from_pattern p senv Env.empty)) in
-      let (t1,t2) = check_case lcase' tenv in
+      let te = typ e (Env.union (fun _ _ b -> Some b) tenv (tenv_from_pattern p senv Env.empty)) in
+      let (_,t2) = check_case lcase' tenv in
       if t2 <> te then 
         failwith "type error: match result different" (*if all expression don't have the same type*)
         else

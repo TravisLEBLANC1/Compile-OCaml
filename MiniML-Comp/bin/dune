@@ -6,5 +6,8 @@
  (infer true))
 (executables
  (names minimlc impc interpreteri)
+ (libraries src)
  (promote (until-clean))
  (flags ()))
+
+(dirs :standard \ tests)

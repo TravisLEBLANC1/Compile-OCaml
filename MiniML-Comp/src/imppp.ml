@@ -55,7 +55,7 @@ and pp_args: expression list -> string = function
 let pp_program prog out_channel =
   let print s = fprintf out_channel s in
   let margin = ref 0 in
-  let print_margin () = for i = 1 to 2 * !margin do print " " done in
+  let print_margin () = for _ = 1 to 2 * !margin do print " " done in
   
   let rec pp_instruction = function
     | Putchar(e) ->

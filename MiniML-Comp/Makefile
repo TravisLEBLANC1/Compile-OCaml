@@ -9,5 +9,5 @@
 	./impc.exe tests/test_comp/$@.imp
 
 clean:
-	rm -f tests/*.asm tests/*.imp
+	rm -f tests/*/*.asm tests/*/*.imp
 	dune clean

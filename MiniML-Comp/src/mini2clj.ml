@@ -33,7 +33,7 @@ let translate_program (p: Miniml.prog) =
      - e' : Clj expression
      - l  : association list, maps each free variable to its index in the current closure
    *)
-  let rec tr_expr (e: Miniml.expr) (bvars: VSet.t): Clj.expression * (string * int) list =
+  let tr_expr (e: Miniml.expr) (bvars: VSet.t): Clj.expression * (string * int) list =
     (* association list, maps free variables to indices in the closure *)
     let cvars = ref [] in
     let cpt = ref 0 in (* indices will start at 1 *)
@@ -44,8 +44,8 @@ let translate_program (p: Miniml.prog) =
       fun x -> incr cpt; cvars := (x, !cpt) :: !cvars; !cpt
     in
 
-    let varlist_from_cvars param = 
-      List.map (fun (x,i) -> Clj.Name(x)) (List.sort (fun (x,i) (x,j) -> i - j) !cvars )
+    let varlist_from_cvars = fun () ->
+      List.map (fun (x,_) -> Clj.Name(x)) (List.sort (fun (_,i) (_,j) -> i - j) !cvars )
     in 
 
     (* Translation of a variable, extending the closure if needed *)
@@ -60,14 +60,14 @@ let translate_program (p: Miniml.prog) =
       | Miniml.Fun(x, _, (Fun(_) as f)) ->
         let fun_name = new_fname () in
         let new_fdef = Clj.({name=fun_name; body=crawl_closure f bvars; param=x}) in
-        let closure = Clj.MkClj(fun_name, true, varlist_from_cvars x) in
+        let closure = Clj.MkClj(fun_name, true, varlist_from_cvars ()) in
         fdefs := new_fdef::!fdefs;
         closure
       (* case where e is not a fun*)
       | Miniml.Fun(x, _, e) ->
         let fun_name = new_fname () in
         let new_fdef = Clj.({name=fun_name; body=crawl_closure e (VSet.add x bvars); param=x}) in
-        let closure = Clj.MkClj(fun_name, true, varlist_from_cvars x) in
+        let closure = Clj.MkClj(fun_name, true, varlist_from_cvars ()) in
         fdefs := new_fdef::!fdefs;
         closure
       | _ -> crawl e bvars
@@ -104,16 +104,6 @@ let translate_program (p: Miniml.prog) =
         cpt := 0;
         result
 
-      | Fix(x, _, e) ->
-        (* create a global function definition, and add it to fdefs
-            (this implies creating a new name with new_fname) *)
-        (* return an expression that builds a closure *)
-        begin
-        match e with
-          | Fun(_,_,_) -> failwith "oh ok"
-          | _ -> failwith "hmmm"
-        end
-
       | App(e1, e2) ->
         App(mkclj_false @@ crawl e1 bvars, crawl e2 bvars)
       
@@ -134,8 +124,7 @@ let translate_program (p: Miniml.prog) =
   (* Remark: for the main expression, the set of free variables collected in cvars
      shall be empty (otherwise, the program has undefined variables!) *)
   let code, cvars = tr_expr p.code VSet.empty in
-  (* List.iter (fun (x,i) -> print_string x) cvars;
-  assert (cvars = []); *)
+  assert (cvars = []); 
   Clj.({
     functions = !fdefs;
     code = code;

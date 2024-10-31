@@ -1,7 +1,7 @@
 open Format
 open Lexing
 
-open Typechecker
+open Src.Typechecker
 
 let usage = "usage: ./minimlc file.ml"
 
@@ -31,12 +31,12 @@ let () =
     let prog = Parser.program Lexer.token lb
     in
     close_in c;
-    ignore(Typechecker.typ_prog prog);
-    let progclj = Mini2clj.translate_program prog in
-    let progimp = Clj2imp.translate_program progclj in
+    ignore(Src.Typechecker.typ_prog prog);
+    let progclj = Src.Mini2clj.translate_program prog in
+    let progimp = Src.Clj2imp.translate_program progclj in
     let output_file = (Filename.chop_suffix file ".ml") ^ ".imp" in
     let out = open_out output_file in
-    Imppp.pp_program progimp out;
+    Src.Imppp.pp_program progimp out;
     close_out out;
     exit 0
   with

@@ -1,0 +1,15 @@
+(library
+  (name src)
+  (modules 
+  clj
+  Clj2imp
+  imp 
+  imp2mips
+  imppp
+  interpreter
+  mini2clj
+  miniml
+  mips
+  ops
+  typechecker)
+)

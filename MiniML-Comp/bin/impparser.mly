@@ -1,8 +1,8 @@
 %{
 
   open Lexing
-  open Imp
-  open Ops
+  open Src.Imp
+  open Src.Ops
 
 %}
 
@@ -29,7 +29,7 @@
 %nonassoc LBRACKET
 
 %start program
-%type <Imp.program> program
+%type <Src.Imp.program> program
 
 %%
 
