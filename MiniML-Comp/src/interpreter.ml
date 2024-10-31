@@ -11,18 +11,23 @@ type value =
 and env = value Env.t
 
 open Printf
-let rec print_value = function
-  | VInt n -> printf "%d" n
-  | VBool b -> printf "%b" b
-  | VPair(v1, v2) -> printf "("; print_value v1; printf ","; print_value v2; printf ")"
-  | VClos _ -> printf "<fun>"
-  | VFix(Fun _, _, _, _) -> printf "<fun>"
-  | VFix _ -> failwith "fix value error"
-  | VCstr(c, vlist) -> printf "%s(" c; print_vlist vlist; printf ")"
-and print_vlist = function
-  | [] -> ()
-  | [v] -> print_value v
-  | v::vlist -> print_value v; printf ", "; print_vlist vlist
+let print_value v = 
+  let rec print_value = function
+    | VInt n -> printf "%d" n
+    | VBool b -> printf "%b" b
+    | VPair(v1, v2) -> printf "("; print_value v1; printf ","; print_value v2; printf ")"
+    | VClos _ -> printf "<fun>"
+    | VFix(Fun _, _, _, _) -> printf "<fun>"
+    | VFix _ -> failwith "fix value error"
+    | VCstr(c, vlist) -> printf "%s(" c; print_vlist vlist; printf ")"
+  and print_vlist = function
+    | [] -> ()
+    | [v] -> print_value v
+    | v::vlist -> print_value v; printf ", "; print_vlist vlist
+  in
+  print_value v; 
+  printf "\n"
+  
 
 let env_from_pattern pat lv env  =
   let rec add_env_list lv lp env = match lv, lp with

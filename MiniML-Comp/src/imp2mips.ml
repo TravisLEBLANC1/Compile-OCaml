@@ -268,5 +268,5 @@ let translate_program prog =
     (fun id code -> label id @@ dword [0] @@ code)
     prog.globals (label "arg" @@ dword [0])
   in
-  
+  print_string "imp2mips done\n";
   { text; data }

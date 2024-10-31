@@ -22,7 +22,7 @@ let report (b,e) =
   eprintf "File \"%s\", line %d, characters %d-%d:\n" file l fc lc
 
 let () =
-  let cm = open_in "malloc.imp" in
+  let cm = open_in "bin/malloc.imp" in
   let lbm = Lexing.from_channel cm in
   let malloc = Impparser.program Implexer.token lbm in
   close_in cm;

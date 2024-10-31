@@ -5,7 +5,7 @@
  (flags --explain --dump)
  (infer true))
 (executables
- (names minimlc impc interpreteri)
+ (names minimlc impc minimli)
  (libraries src)
  (promote (until-clean))
  (flags ()))

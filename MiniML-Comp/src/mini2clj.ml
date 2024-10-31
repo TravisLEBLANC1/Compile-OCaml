@@ -125,6 +125,7 @@ let translate_program (p: Miniml.prog) =
      shall be empty (otherwise, the program has undefined variables!) *)
   let code, cvars = tr_expr p.code VSet.empty in
   assert (cvars = []); 
+  print_string "mini2clj done\n";
   Clj.({
     functions = !fdefs;
     code = code;

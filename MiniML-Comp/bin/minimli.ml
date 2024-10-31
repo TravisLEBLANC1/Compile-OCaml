@@ -4,7 +4,7 @@ open Lexing
 open Src.Typechecker
 open Src.Interpreter
 
-let usage = "usage: ./minimlc file.ml"
+let usage = "usage: ./minimli file.ml"
 
 let spec = []
   
@@ -35,7 +35,6 @@ let () =
     ignore(Src.Typechecker.typ_prog prog);
     let v = Src.Interpreter.eval_prog prog in
     Src.Interpreter.print_value v;
-    printf "\n";
     exit 0
   with
   | Parser.Error ->

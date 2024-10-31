@@ -164,5 +164,5 @@ let create_env ltype_decl =
 let typ_prog p =
   let senv = create_env p.typs in
   ignore(typ_expr p.code senv);
-  printf "typecheck clear\n"
+  printf "typecheck done\n"
 
