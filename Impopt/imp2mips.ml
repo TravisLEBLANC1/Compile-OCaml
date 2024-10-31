@@ -14,7 +14,7 @@ let tmp_regs = [| t0; t1; t2; t3; t4; t5; t6; t7; t8; t9 |]
 let nb_tmp_regs = Array.length tmp_regs
 
 let var_regs = [| s0; s1; s2; s3; s4; s5; s6; s7 |]
-let nb_var_regs = 3 (*Array.length var_regs - 5*)
+let nb_var_regs = Array.length var_regs
 
 let push reg = subi sp sp 4 @@ sw reg 0(sp)
 let pop  reg = lw reg 0(sp) @@ addi sp sp 4
@@ -81,7 +81,7 @@ let tr_function fdef =
     | Reg r -> move ti r
     | Stack offset -> lw ti offset(fp)
   in
-  (* store the variable ti in id*)
+  (* store ti in the variable id*)
   let store_variable (ti:register) (id:explicit_alloc) = 
     match id with
     | Reg r -> move r ti 
@@ -135,7 +135,7 @@ let tr_function fdef =
   (* Generate MIPS code for an Imp instruction or sequence. *)
   let rec tr_seq = function
     | []   -> nop
-    | i::s -> print_string "next\n"; tr_instr i @@ tr_seq s
+    | i::s -> tr_instr i @@ tr_seq s
 
   and tr_instr i = match i with
     | Putint(e) -> tr_expr 0 e @@ move a0 t0 @@ li v0 1 @@ syscall

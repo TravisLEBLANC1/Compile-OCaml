@@ -1,34 +1,36 @@
 
 
 function main(arg) {
-  var i;
-  var n;
+  var a;
   var b;
   var c;
   var d;
   var e;
   var f;
   var g;
+  var h;
   var result;
-  i = 0;
-  n = 32;
-  while(i < 5){
-    if (i + 2 < 6) {
-        putchar(n);
+  a = 0;
+  b = 1;
+  c = 2;
+  d = 3;
+  e = 4;
+  f = 5;
+  g = 6;
+  h = 7;
+  
+  while(a < 5){
+    if (a + 2 < 6) {
+      putint(a);
     }else {
-      putchar(35);
+      putint(b);
     }
-    i = i + 1;
+    a = a + 1;
   }
-  putchar(n);
-  result = i + n + b + c + d + e + f + g;
-  putchar(result);
-result = i + n + b + c + d + e + f + g;
-}
-
-function test(arg){
-    while(x < 5){
-        x = 4;
-        x = x + 1;
-    }
+  putint(g);
+  result = a + b + c + d + e + f + g;
+  putchar(10);
+  putint(result);
+  result = a + b + c + d + e + f + g;
+  return result;
 }
