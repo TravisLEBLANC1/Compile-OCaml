@@ -27,7 +27,9 @@ type expr =
   | Cstr of string * expr list
   | Match of expr * case list
 and case = pattern * expr
-and pattern = string * string list
+and pattern = 
+  | PVar of string                   (* pattern case: variable                *)
+  | PCstr of string * pattern list   (* pattern case: constructor application *)
 
 type cstr_decl = string * typ list
 type typ_decl = string * cstr_decl list

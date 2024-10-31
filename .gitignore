@@ -1,4 +1,4 @@
 */_build/
 *.exe
 *.asm
-MiniML-Comp/tests/*.imp
+MiniML-Comp/tests/*/*.imp

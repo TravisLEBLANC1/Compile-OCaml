@@ -115,7 +115,7 @@ let translate_program (p: Miniml.prog) =
         end
 
       | App(e1, e2) ->
-        App(crawl e1 bvars, crawl e2 bvars)
+        App(mkclj_false @@ crawl e1 bvars, crawl e2 bvars)
       
       | _ ->
          failwith "todo mini to clj"

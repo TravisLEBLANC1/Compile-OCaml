@@ -2,6 +2,7 @@ open Format
 open Lexing
 
 open Typechecker
+open Interpreter
 
 let usage = "usage: ./minimlc file.ml"
 
@@ -32,12 +33,9 @@ let () =
     in
     close_in c;
     ignore(Typechecker.typ_prog prog);
-    let progclj = Mini2clj.translate_program prog in
-    let progimp = Clj2imp.translate_program progclj in
-    let output_file = (Filename.chop_suffix file ".ml") ^ ".imp" in
-    let out = open_out output_file in
-    Imppp.pp_program progimp out;
-    close_out out;
+    let v = Interpreter.eval_prog prog in
+    Interpreter.print_value v;
+    printf "\n";
     exit 0
   with
   | Parser.Error ->

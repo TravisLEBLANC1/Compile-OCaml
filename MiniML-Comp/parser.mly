@@ -103,9 +103,11 @@ cases:
 ;
 
 pattern:
-| c=CSTR { (c, []) }
-| c=CSTR LPAR pargs=separated_list(COMMA, IDENT) RPAR { (c, pargs) }
+| id=IDENT { PVar id }
+| c=CSTR { PCstr(c, []) }
+| c=CSTR LPAR pargs=separated_list(COMMA, pattern) RPAR { PCstr(c, pargs) }
 ;
+
 
 %inline unop:
 | MINUS { Minus }

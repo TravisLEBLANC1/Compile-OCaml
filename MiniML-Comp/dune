@@ -5,6 +5,6 @@
  (flags --explain --dump)
  (infer true))
 (executables
- (names minimlc impc)
+ (names minimlc impc interpreteri)
  (promote (until-clean))
  (flags ()))
