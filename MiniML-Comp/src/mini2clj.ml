@@ -8,11 +8,6 @@ module VSet = Set.Make(String)
 (* return the tail only if the list is non empty*)
 let safe_tl lst = if List.exists (fun _ -> true) lst then List.tl lst else lst
 
-(* change an mkclj to false, don't change the other expressions*)
-let mkclj_false (e:Clj.expression) = match e with
-  | Clj.MkClj(s, _, vl) -> Clj.MkClj(s, false, vl)
-  | x -> x 
-
 let translate_program (p: Miniml.prog) =
   (* List of global function definitions *)
   let fdefs = ref [] in
@@ -43,9 +38,11 @@ let translate_program (p: Miniml.prog) =
     let new_cvar =
       fun x -> incr cpt; cvars := (x, !cpt) :: !cvars; !cpt
     in
-
-    let varlist_from_cvars = fun () ->
-      List.map (fun (x,_) -> Clj.Name(x)) (List.sort (fun (_,i) (_,j) -> i - j) !cvars )
+    let remove_cvar x = 
+      cvars := List.remove_assoc x !cvars;
+    in
+    let varlist_from_cvars () = 
+      List.map (fun (x, _) -> Clj.Name(x) ) (List.sort (fun (_,i) (_,j) -> i - j) !cvars )
     in 
 
     (* Translation of a variable, extending the closure if needed *)
@@ -58,16 +55,21 @@ let translate_program (p: Miniml.prog) =
     
     and crawl_closure e bvars : Clj.expression = match e with
       | Miniml.Fun(x, _, (Fun(_) as f)) ->
+        (* if e is a fun, we add the param as a free variable*)
         let fun_name = new_fname () in
+        ignore(new_cvar x);
         let new_fdef = Clj.({name=fun_name; body=crawl_closure f bvars; param=x}) in
-        let closure = Clj.MkClj(fun_name, true, varlist_from_cvars ()) in
+        ignore(remove_cvar x);
+        let closure = Clj.MkClj(fun_name, varlist_from_cvars ()) in
+        
         fdefs := new_fdef::!fdefs;
         closure
-      (* case where e is not a fun*)
+      
       | Miniml.Fun(x, _, e) ->
+        (* if e is not a fun, no more free variable*)
         let fun_name = new_fname () in
         let new_fdef = Clj.({name=fun_name; body=crawl_closure e (VSet.add x bvars); param=x}) in
-        let closure = Clj.MkClj(fun_name, true, varlist_from_cvars ()) in
+        let closure = Clj.MkClj(fun_name, varlist_from_cvars ()) in
         fdefs := new_fdef::!fdefs;
         closure
       | _ -> crawl e bvars
@@ -99,13 +101,13 @@ let translate_program (p: Miniml.prog) =
         Let(x, crawl e1 bvars, crawl e2 (VSet.add x bvars))
 
       | Fun(_) as f -> 
-        let result = mkclj_false @@ crawl_closure f (VSet.empty) in 
+        let result = crawl_closure f (VSet.empty) in 
         cvars := [];
         cpt := 0;
         result
 
       | App(e1, e2) ->
-        App(mkclj_false @@ crawl e1 bvars, crawl e2 bvars)
+        App(crawl e1 bvars, crawl e2 bvars)
       
       | _ ->
          failwith "todo mini to clj"

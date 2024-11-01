@@ -19,7 +19,7 @@ type expression =
   | Binop of Ops.binop * expression * expression
 
   (* builds a closre, given a global function name and a list of free variables *)
-  | MkClj of string * bool * var list
+  | MkClj of string * var list
 
   | App   of expression * expression
   | If    of expression * expression * expression

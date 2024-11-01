@@ -23,18 +23,28 @@ let tr_var v env = match v with
 
 (* translate the varlist from a closure
    we add all the variable that we know currently in the closure array*)
-let rec tr_varlist var_cl varlist env i = match varlist with
+(* let rec tr_varlist var_cl varlist env i = match varlist with
    | [] -> []
    | Clj.Name(x)::varlist' -> 
      Imp.(if STbl.mem x env then 
-            [Imp.array_set (Var var_cl) (Int (i + 1)) (Var(STbl.find x env))] @
+            [array_set (Var var_cl) (Int (i + 1)) (Var(STbl.find x env))] @
             tr_varlist var_cl varlist' env (i+1) 
           else 
             tr_varlist var_cl varlist' env (i+1))
-   | _ -> failwith "for the moment this is not possible"
+   | Clj.CVar(i)::varlist' ->
+      Imp.([array_set (Var var_cl) (Int (i + 1)) (array_get (Var "closure") (Int i))] @
+            tr_varlist var_cl varlist' env (i+1)) *)
 
-(* let tr_varlist var_cl varlist env = 
-   List.mapi (fun i v -> Imp.array_set (Var var_cl) (Int (i + 1)) (tr_var v env)) varlist *)
+
+let tr_varlist var_cl varlist env = 
+   let index = ref 0 in
+   let tr_var_clos v env = match v with
+   (* this works if the varlist is sorted by index*)
+      | Clj.Name(x) ->
+         Imp.(if STbl.mem x env then Var(STbl.find x env) else (incr index; array_get (Var "closure") (Int !index)))
+      | _ -> failwith "CVar in cvars"
+   in
+   List.mapi (fun i v -> Imp.array_set (Var var_cl) (Int (i + 1)) (tr_var_clos v env)) varlist
 
 let print_var v = match v with 
    | Clj.CVar(n) -> Printf.printf "cvar(%d)" n
@@ -136,27 +146,14 @@ let tr_expr e env =
          let is2, t2 = tr_expr e2 (STbl.add x lv env) in
          Imp.(is1 @ [Set(lv, t1)] @ is2, t2)
       
-      | Clj.MkClj(fun_name, false, varlist) ->
-         (* case where we need to allocate the closure array*)
+      | Clj.MkClj(fun_name, varlist) ->
          let var_cl = new_var "closure" in 
          print_string fun_name;
-         print_string "false ";
          print_varlist varlist;
          print_string "\n";
          Imp.([Set(var_cl, array_create (Int (1+List.length varlist)))] @
               [array_set (Var var_cl) (Int 0) (Addr fun_name)] @ 
-              tr_varlist var_cl varlist env 0
-            ), Var var_cl
-      
-      | Clj.MkClj(fun_name, true, varlist) ->
-         (* case where the closure array is already allocated*)
-         let var_cl = "closure" in
-         print_string fun_name;
-         print_string "true ";
-         print_varlist varlist;
-         print_string "\n";
-         Imp.([array_set (Var var_cl) (Int 0) (Addr fun_name)] @
-               tr_varlist var_cl varlist env 0
+              tr_varlist var_cl varlist env
             ), Var var_cl
 
       | Clj.App(_) -> tr_app e env (new_var "tmp")
