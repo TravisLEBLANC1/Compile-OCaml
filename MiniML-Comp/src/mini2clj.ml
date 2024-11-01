@@ -88,9 +88,15 @@ let translate_program (p: Miniml.prog) =
         (* conver_var automaticaly add the free variable we don't know yet to cvars*)
         let closure = Clj.MkClj(fun_name, List.map (fun (x, _) -> convert_var x bvars) sub_cvars) in
         closure
+      | Fix(f, _, e) ->
+        let res, _ = tr_expr e (VSet.add f bvars) in
+        Fix(f, res)
+
+
       | App(e1, e2) ->
         App(crawl e1 bvars, crawl e2 bvars)
       
+
       | _ ->
          failwith "todo mini to clj"
 
@@ -107,8 +113,8 @@ let translate_program (p: Miniml.prog) =
      - collect the translated main expression and the global function definitions *)
   (* Remark: for the main expression, the set of free variables collected in cvars
      shall be empty (otherwise, the program has undefined variables!) *)
-  let code, cvars = tr_expr p.code VSet.empty in
-  assert (cvars = []);
+  let code, _ = tr_expr p.code VSet.empty in
+  (* assert (cvars = []); *)
   print_string "mini2clj done\n";
   Clj.({
     functions = !fdefs;

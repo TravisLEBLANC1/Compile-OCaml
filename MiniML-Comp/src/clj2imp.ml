@@ -109,7 +109,7 @@ let tr_expr e env =
       | Clj.Binop(Pair, e1, e2) ->
          let is1, te1 = tr_expr e1 env in
          let is2, te2 = tr_expr e2 env in
-         let vname = new_var "pair" in 
+         let vname = new_var "var_pair" in 
          let v = Imp.Var(vname) in
          is1 @ is2 @ 
          Imp.([Set(vname, array_create (Int 2))] @
@@ -125,7 +125,7 @@ let tr_expr e env =
          let iscond, tecond = tr_expr cond env in
          let is1, te1 = tr_expr e1 env in
          let is2, te2 = tr_expr e2 env in
-         let vname = new_var "if" in
+         let vname = new_var "var_if" in
          iscond @ 
          [Imp.If(tecond, 
             is1 @ [Imp.Set(vname, te1)], 
@@ -149,6 +149,16 @@ let tr_expr e env =
               tr_varlist var_cl varlist env
             ), Var var_cl
       
+      | Clj.Fix(f, Clj.MkClj(fun_name, varlist)) ->
+         let var_cl = new_var "closure" in 
+         print_string fun_name;
+         print_varlist varlist;
+         print_string "\n";
+         Imp.([Set(var_cl, array_create (Int (1+List.length varlist)))] @
+              [array_set (Var var_cl) (Int 0) (Addr fun_name)] @ 
+              tr_varlist var_cl varlist (STbl.add f var_cl env)
+            ), Var var_cl
+
       | Clj.App(_) -> tr_app e env (new_var "tmp")
 
       | _ ->
