@@ -8,6 +8,12 @@ module VSet = Set.Make(String)
 (* return the tail only if the list is non empty*)
 let safe_tl lst = if List.exists (fun _ -> true) lst then List.tl lst else lst
 
+(* let print_cvar (x, i) = Printf.printf "(%s, %d)" x i
+
+let rec print_cvars = function
+  | [] -> ()
+  | cvar :: cvars -> print_cvar cvar ; print_string ", "; print_cvars cvars *)
+
 let translate_program (p: Miniml.prog) =
   (* List of global function definitions *)
   let fdefs = ref [] in
@@ -28,22 +34,16 @@ let translate_program (p: Miniml.prog) =
      - e' : Clj expression
      - l  : association list, maps each free variable to its index in the current closure
    *)
-  let tr_expr (e: Miniml.expr) (bvars: VSet.t): Clj.expression * (string * int) list =
+  let rec tr_expr (e: Miniml.expr) (bvars: VSet.t): Clj.expression * (string * int) list =
     (* association list, maps free variables to indices in the closure *)
     let cvars = ref [] in
-    let cpt = ref 0 in (* indices will start at 1 *)
     (* utility function, to be called for each new free variable:
        - records the variable in cvars
        - returns the index *)
     let new_cvar =
+      let cpt = ref 0 in (* indices will start at 1 *)
       fun x -> incr cpt; cvars := (x, !cpt) :: !cvars; !cpt
     in
-    let remove_cvar x = 
-      cvars := List.remove_assoc x !cvars;
-    in
-    let varlist_from_cvars () = 
-      List.map (fun (x, _) -> Clj.Name(x) ) (List.sort (fun (_,i) (_,j) -> i - j) !cvars )
-    in 
 
     (* Translation of a variable, extending the closure if needed *)
     let rec convert_var x bvars =
@@ -52,27 +52,6 @@ let translate_program (p: Miniml.prog) =
         else if List.mem_assoc x !cvars (* if the variable has already been recorded *)
         then CVar(List.assoc x !cvars) (* then take its index *)
         else CVar(new_cvar x))        (* otherwise, create and record a new index *)
-    
-    and crawl_closure e bvars : Clj.expression = match e with
-      | Miniml.Fun(x, _, (Fun(_) as f)) ->
-        (* if e is a fun, we add the param as a free variable*)
-        let fun_name = new_fname () in
-        ignore(new_cvar x);
-        let new_fdef = Clj.({name=fun_name; body=crawl_closure f bvars; param=x}) in
-        ignore(remove_cvar x);
-        let closure = Clj.MkClj(fun_name, varlist_from_cvars ()) in
-        
-        fdefs := new_fdef::!fdefs;
-        closure
-      
-      | Miniml.Fun(x, _, e) ->
-        (* if e is not a fun, no more free variable*)
-        let fun_name = new_fname () in
-        let new_fdef = Clj.({name=fun_name; body=crawl_closure e (VSet.add x bvars); param=x}) in
-        let closure = Clj.MkClj(fun_name, varlist_from_cvars ()) in
-        fdefs := new_fdef::!fdefs;
-        closure
-      | _ -> crawl e bvars
 
     (* Translation of an expression (main loop)
        Returns the translated expression, and extend the closure as a side effect *)
@@ -100,12 +79,15 @@ let translate_program (p: Miniml.prog) =
       | Let(x, e1, e2) ->
         Let(x, crawl e1 bvars, crawl e2 (VSet.add x bvars))
 
-      | Fun(_) as f -> 
-        let result = crawl_closure f (VSet.empty) in 
-        cvars := [];
-        cpt := 0;
-        result
-
+      | Fun(x, _, e) -> 
+        let body, sub_cvars = tr_expr e (VSet.singleton x) in
+        let fun_name = new_fname () in
+        
+        let new_fdef = Clj.({name=fun_name; body=body; param=x}) in
+        fdefs := new_fdef :: !fdefs;
+        (* conver_var automaticaly add the free variable we don't know yet to cvars*)
+        let closure = Clj.MkClj(fun_name, List.map (fun (x, _) -> convert_var x bvars) sub_cvars) in
+        closure
       | App(e1, e2) ->
         App(crawl e1 bvars, crawl e2 bvars)
       
@@ -126,7 +108,7 @@ let translate_program (p: Miniml.prog) =
   (* Remark: for the main expression, the set of free variables collected in cvars
      shall be empty (otherwise, the program has undefined variables!) *)
   let code, cvars = tr_expr p.code VSet.empty in
-  assert (cvars = []); 
+  assert (cvars = []);
   print_string "mini2clj done\n";
   Clj.({
     functions = !fdefs;

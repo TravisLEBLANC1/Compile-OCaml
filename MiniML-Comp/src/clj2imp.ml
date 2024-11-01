@@ -37,14 +37,7 @@ let tr_var v env = match v with
 
 
 let tr_varlist var_cl varlist env = 
-   let index = ref 0 in
-   let tr_var_clos v env = match v with
-   (* this works if the varlist is sorted by index*)
-      | Clj.Name(x) ->
-         Imp.(if STbl.mem x env then Var(STbl.find x env) else (incr index; array_get (Var "closure") (Int !index)))
-      | _ -> failwith "CVar in cvars"
-   in
-   List.mapi (fun i v -> Imp.array_set (Var var_cl) (Int (i + 1)) (tr_var_clos v env)) varlist
+   List.mapi (fun i v -> Imp.array_set (Var var_cl) (Int (i + 1)) (tr_var v env)) varlist
 
 let print_var v = match v with 
    | Clj.CVar(n) -> Printf.printf "cvar(%d)" n
@@ -155,7 +148,7 @@ let tr_expr e env =
               [array_set (Var var_cl) (Int 0) (Addr fun_name)] @ 
               tr_varlist var_cl varlist env
             ), Var var_cl
-
+      
       | Clj.App(_) -> tr_app e env (new_var "tmp")
 
       | _ ->
