@@ -82,12 +82,11 @@ let translate_program (p: Miniml.prog) =
       | Fun(x, _, e) -> 
         let body, sub_cvars = tr_expr e (VSet.singleton x) in
         let fun_name = new_fname () in
-        
         let new_fdef = Clj.({name=fun_name; body=body; param=x}) in
         fdefs := new_fdef :: !fdefs;
         (* conver_var automaticaly add the free variable we don't know yet to cvars*)
-        let closure = Clj.MkClj(fun_name, List.map (fun (x, _) -> convert_var x bvars) sub_cvars) in
-        closure
+        let sorted_cvars = List.sort (fun (_,i) (_,j) -> i-j) sub_cvars in
+        Clj.MkClj(fun_name, List.map (fun (x, _) -> convert_var x bvars) sorted_cvars)
       | Fix(f, _, e) ->
         let res, _ = tr_expr e (VSet.add f bvars) in
         Fix(f, res)

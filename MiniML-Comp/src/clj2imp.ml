@@ -74,17 +74,17 @@ let tr_expr e env =
   in
 
   (* translate the application using only one tmp variable (instead of creating multiple for just 1 fun)*)
-  let rec tr_app (e: Clj.expression) (env: string STbl.t) (tmp: string):
+  (* let rec tr_app (e: Clj.expression) (env: string STbl.t) (tmp: string):
       Imp.sequence * Imp.expression = match e with
     | Clj.App(e1, e2) ->
       let is1, te1 = tr_app e1 env tmp in (* e1 should be a MkClj*)
       let is2, te2 = tr_app e2 env tmp in
       Imp.(is1 @ is2 @ [Set(tmp, te1)], PCall(Deref(Imp.array_get (Var tmp) (Int 0)), [te2] @ [Var tmp]))
-    | _ -> tr_expr e env
+    | _ -> tr_expr e env *)
 
   (* Main translation function
      Return the pair (s, e'), and records variable names in vars as a side effect *)
-  and tr_expr (e: Clj.expression) (env: string STbl.t):
+  let rec tr_expr (e: Clj.expression) (env: string STbl.t):
       Imp.sequence * Imp.expression =
     match e with
       | Clj.Int(n) ->
@@ -159,7 +159,12 @@ let tr_expr e env =
               tr_varlist var_cl varlist (STbl.add f var_cl env)
             ), Var var_cl
 
-      | Clj.App(_) -> tr_app e env (new_var "tmp")
+      | Clj.App(e1, e2) -> 
+         let tmp = new_var "tmp" in
+         let is1, te1 = tr_expr e1 env in (* e1 should be a MkClj*)
+         let is2, te2 = tr_expr e2 env in
+         Imp.(is1 @ is2 @ [Set(tmp, te1)], PCall(Deref(Imp.array_get (Var tmp) (Int 0)), [te2] @ [Var tmp]))
+         (* tr_app e env (new_var "tmp") *)
 
       | _ ->
          failwith "todo tr_expr into imp"
