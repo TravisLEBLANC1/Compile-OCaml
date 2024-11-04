@@ -29,4 +29,4 @@ let rec height (t: tree): int = match t with
   | N(t1, t2) -> 1 + max (height t1) (height t2)
 in
 let t = N(E, N(N(E, E), E)) in
-height t
+height t + (get_int (B(true))) + (get_int (A(38)))

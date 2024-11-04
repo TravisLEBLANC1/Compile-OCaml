@@ -5,6 +5,8 @@
    and take one explicit parameter and one implicit closure
  *)
 
+module CstrTbl = Map.Make(String)
+
 (* Variables are split into two categories *)
 type var =
   | CVar of int    (* closure variables, indexed locally by numbers *)
@@ -29,8 +31,10 @@ type expression =
   | Cstr  of string * expression list
   | Match of expression * case list
 and case = pattern * expression
-and pattern = string * string list
-      
+and pattern = 
+  | PVar of string                   (* pattern case: variable                *)
+  | PCstr of string * pattern list   (* pattern case: constructor application *)
+
 (* Definition of a global function *)
 type function_def = {
   name: string; (* function name, as used in [MkClj] *)
@@ -42,4 +46,5 @@ type function_def = {
 type program = {
   functions: function_def list;
   code: expression;
+  cstrs: int CstrTbl.t;
 }

@@ -23,7 +23,6 @@ type expr =
   | App of expr * expr
   | Fun of string * typ * expr
   | Fix of string * typ * expr
-  (* Constructors, and simplified pattern matching (no nested patterns) *)
   | Cstr of string * expr list
   | Match of expr * case list
 and case = pattern * expr

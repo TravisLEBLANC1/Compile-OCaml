@@ -9,6 +9,12 @@
 module STbl = Map.Make(String)
 
 
+let merge_default _ opt_a opt_b = match opt_a,opt_b with
+   | None, None -> None
+   | Some a, None -> Some a 
+   | None, Some b -> Some b
+   | Some a, Some _ -> Some a 
+
 (* Translation of variables
    - named variables are looked up in the renaming table (or accessed
      directly)
@@ -47,6 +53,9 @@ let rec print_varlist varlist = match varlist with
    | [] -> ()
    | v::varlist' -> print_var v; Printf.printf ", "; print_varlist varlist'
 
+
+
+
 (* Translation of an expression
 
    Parameters:
@@ -60,7 +69,7 @@ let rec print_varlist varlist = match varlist with
    
    Spec: executing s then evaluating e' in IMP is equivalent to evaluating e in CLJ
 *)
-let tr_expr e env =
+let tr_expr e env (cstrs:int Clj.CstrTbl.t) =
   (* Counter for fresh variable names *)
   let cpt = ref (-1) in
   (* List of generated names *)
@@ -82,9 +91,50 @@ let tr_expr e env =
       Imp.(is1 @ is2 @ [Set(tmp, te1)], PCall(Deref(Imp.array_get (Var tmp) (Int 0)), [te2] @ [Var tmp]))
     | _ -> tr_expr e env *)
 
+   (* return 
+      - an expression that give true if e match the pattern
+      - a sequence of initialisation of the variables in case of match
+      - the environement with those variables added
+      *)
+   let rec match_cond (e:Imp.expression) (pat:Clj.pattern) (env: string STbl.t) : Imp.expression * Imp.sequence * string STbl.t = 
+    match pat with
+      | PVar(s) -> let x = new_var s in 
+         Bool(true), [Imp.Set(x, e)], (STbl.add s x env)
+      
+      | PCstr(c, patl) -> 
+         let eq_c = Imp.Binop(Ops.Eq, Imp.array_get e (Int 0), Int (Clj.CstrTbl.find c cstrs)) in 
+         let map_patl = 
+            List.mapi (fun i pat -> match_cond (Imp.array_get e (Int (i+1))) pat env) patl
+         in (* first we translate each pattern*)
+         let fold_fun (e1, s1, env1) (e2, s2, env2) = 
+            Imp.Binop(Ops.And, e1, e2), s1 @ s2, STbl.merge merge_default env1 env2
+         in (*then fold them into the result*)
+         List.fold_left fold_fun (eq_c,[], env) map_patl
+   in 
+   (* translate all expression of the list, and place the results in var_c[i]*)
+   let rec tr_expr_lst (var_c: string) (el : Clj.expression list) (env: string STbl.t) = 
+      let rec tr_internal el index = match el with
+         | [] -> []
+         | e::el' -> let is, te = tr_expr e env in 
+            is@[Imp.(array_set (Var var_c) (Int index) te)] @ tr_internal el' (index+1) 
+      in
+      tr_internal el 1
+   
+   (*translate the caselist into a sequence of Imp.If, the result is put in (Var res)*)
+   and tr_cases (e: Imp.expression) (res: string) (env: string STbl.t) (casel: Clj.case list) = 
+      match casel with
+      | [] -> failwith "empty match"
+      | [(pat, expr)] ->
+         let _, is2, new_env = match_cond e pat env in 
+         let is, te = tr_expr expr new_env  in is2 @ is @ [Imp.Set(res, te)]
+      | (pat, expr) :: casel -> 
+         let cond, is2, new_env = match_cond e pat env in
+         let is, te = tr_expr expr new_env in 
+         [Imp.If(cond, is2 @ is @ [Imp.Set(res, te)], tr_cases e res env casel)]
+
   (* Main translation function
      Return the pair (s, e'), and records variable names in vars as a side effect *)
-  let rec tr_expr (e: Clj.expression) (env: string STbl.t):
+   and tr_expr (e: Clj.expression) (env: string STbl.t):
       Imp.sequence * Imp.expression =
     match e with
       | Clj.Int(n) ->
@@ -166,6 +216,19 @@ let tr_expr e env =
          Imp.(is1 @ is2 @ [Set(tmp, te1)], PCall(Deref(Imp.array_get (Var tmp) (Int 0)), [te2] @ [Var tmp]))
          (* tr_app e env (new_var "tmp") *)
 
+      | Clj.Cstr(c, el) ->
+         let nb_expr = List.length el in
+         let var_c = new_var @@ String.lowercase_ascii c in
+         Imp.([Set(var_c, array_create(Int (1+nb_expr)))] @
+            [array_set (Var var_c) (Int 0) (Int (Clj.CstrTbl.find c cstrs))] @
+            tr_expr_lst var_c el env
+         ), Var var_c
+
+
+      | Clj.Match(e, casel) ->
+         let is1, te1 = tr_expr e env in 
+         let res = new_var "var_match" in 
+         is1 @ tr_cases te1 res env casel , Var res 
       | _ ->
          failwith "todo tr_expr into imp"
 
@@ -176,7 +239,7 @@ let tr_expr e env =
 
     
 (* Translation of a global function *)
-let tr_fdef fdef =
+let tr_fdef fdef cstrs =
   let env =
     let x = Clj.(fdef.param) in
     (* The parameter 'x' is renamed 'param_x' *)
@@ -184,7 +247,7 @@ let tr_fdef fdef =
   in
   (* The variables created for the translation of the body of the function
      are the local variables of the function *)
-  let is, te, locals = tr_expr Clj.(fdef.body) env in
+  let is, te, locals = tr_expr Clj.(fdef.body) env cstrs in
   Imp.({
     name = Clj.(fdef.name);
     code = is @ [Return te];
@@ -196,9 +259,9 @@ let tr_fdef fdef =
 
 (* Translation of a full program *)
 let translate_program prog =
-  let functions = List.map tr_fdef Clj.(prog.functions) in
+  let functions = List.map (fun f -> tr_fdef f Clj.(prog.cstrs)) Clj.(prog.functions) in
   (* Variables of the main expression are the global variables of the program *)
-  let is, te, globals = tr_expr Clj.(prog.code) STbl.empty in
+  let is, te, globals = tr_expr Clj.(prog.code) (STbl.empty) (prog.cstrs) in
   (* Main code ends after printing the result of the main expression *)
   let main = Imp.(is @ [Expr(Call("print_int", [te]))]) in
   print_string "clj2imp done\n";

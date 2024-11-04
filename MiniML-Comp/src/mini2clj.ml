@@ -8,6 +8,10 @@ module VSet = Set.Make(String)
 (* return the tail only if the list is non empty*)
 let safe_tl lst = if List.exists (fun _ -> true) lst then List.tl lst else lst
 
+let rec vars_from_pat pat = match pat with
+  | Miniml.PVar(s) -> VSet.singleton s 
+  | Miniml.PCstr(s, patl) -> List.fold_left (fun set pat -> VSet.union set (vars_from_pat pat)) (VSet.singleton s) patl
+
 (* let print_cvar (x, i) = Printf.printf "(%s, %d)" x i
 
 let rec print_cvars = function
@@ -43,6 +47,15 @@ let translate_program (p: Miniml.prog) =
     let new_cvar =
       let cpt = ref 0 in (* indices will start at 1 *)
       fun x -> incr cpt; cvars := (x, !cpt) :: !cvars; !cpt
+    in
+    (* translate the pattern from miniml to a pattern of clj*)
+    let rec tr_pat pat = 
+      let tr_pat_lst patl =
+        List.map tr_pat patl
+      in
+      match pat with
+        | Miniml.PVar(s) -> Clj.PVar(s)
+        | Miniml.PCstr(s, pl) -> Clj.PCstr(s, tr_pat_lst pl)
     in
 
     (* Translation of a variable, extending the closure if needed *)
@@ -87,17 +100,20 @@ let translate_program (p: Miniml.prog) =
         (* conver_var automaticaly add the free variable we don't know yet to cvars*)
         let sorted_cvars = List.sort (fun (_,i) (_,j) -> i-j) sub_cvars in
         Clj.MkClj(fun_name, List.map (fun (x, _) -> convert_var x bvars) sorted_cvars)
+
       | Fix(f, _, e) ->
         let res, _ = tr_expr e (VSet.add f bvars) in
         Fix(f, res)
 
-
       | App(e1, e2) ->
         App(crawl e1 bvars, crawl e2 bvars)
       
-
-      | _ ->
-         failwith "todo mini to clj"
+      | Cstr(c, el) ->
+        Cstr(c, List.map (fun e -> crawl e bvars) el)
+      
+      | Match(e1, cl) ->
+        let mapf (pat, e2) = (tr_pat pat, crawl e2 (VSet.union (vars_from_pat pat) bvars)) in
+        Match(crawl e1 bvars, List.map mapf cl)
 
     in
     (* Return the result of the translation, and the list of variables to be 
@@ -106,16 +122,24 @@ let translate_program (p: Miniml.prog) =
     te, !cvars
 
   in
-
+  let map_cstr typs = 
+    let map = ref Clj.CstrTbl.empty in 
+    let map_cstr_internal cl =
+      List.iteri (fun i (c, _) -> map := Clj.CstrTbl.add c i !map) cl
+    in
+    List.iter (fun (_, cl) -> map_cstr_internal cl) typs ;
+    !map
+  in
   (* Translation of a full program:
      - start with an empty set of bound variables
      - collect the translated main expression and the global function definitions *)
   (* Remark: for the main expression, the set of free variables collected in cvars
      shall be empty (otherwise, the program has undefined variables!) *)
-  let code, _ = tr_expr p.code VSet.empty in
-  (* assert (cvars = []); *)
+  let code, cvars = tr_expr p.code VSet.empty in
+  assert (cvars = []);
   print_string "mini2clj done\n";
   Clj.({
     functions = !fdefs;
     code = code;
+    cstrs = map_cstr p.typs
   })
