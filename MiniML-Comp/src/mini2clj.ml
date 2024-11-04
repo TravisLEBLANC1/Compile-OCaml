@@ -125,7 +125,10 @@ let translate_program (p: Miniml.prog) =
   let map_cstr typs = 
     let map = ref Clj.CstrTbl.empty in 
     let map_cstr_internal cl =
-      List.iteri (fun i (c, _) -> map := Clj.CstrTbl.add c i !map) cl
+      List.iteri (fun i (c, typl) -> 
+        if List.length typl > 0 then 
+          map := Clj.CstrTbl.add c i !map 
+        else map := Clj.CstrTbl.add c (300+i) !map) cl (*300 is used to signify it's an empty constructor*)
     in
     List.iter (fun (_, cl) -> map_cstr_internal cl) typs ;
     !map
