@@ -102,19 +102,13 @@ let tr_expr e env (cstrs:int Clj.CstrTbl.t) =
          Bool(true), [Imp.Set(x, e)], (STbl.add s x env)
       
       | PCstr(c, patl) -> 
-         let index = Clj.CstrTbl.find c cstrs in 
-         let eq_c = 
-            if index < 300 then 
-               Imp.Binop(Ops.Eq, Imp.array_get e (Int 0), Int (index))     
-            else (*if >300 then it's an empty constructor*)
-               Imp.Binop(Ops.Eq, e, Int index)
-         in 
+         let eq_c = Imp.Binop(Ops.Eq, Imp.array_get e (Int 0), Int (Clj.CstrTbl.find c cstrs)) in 
          let map_patl = 
             List.mapi (fun i pat -> match_cond (Imp.array_get e (Int (i+1))) pat env) patl
-         in (* first we translate each pattern, then fold them into the result*)
+         in (* first we translate each pattern*)
          let fold_fun (e1, s1, env1) (e2, s2, env2) = 
             Imp.Binop(Ops.And, e1, e2), s1 @ s2, STbl.merge merge_default env1 env2
-         in 
+         in (*then fold them into the result*)
          List.fold_left fold_fun (eq_c,[], env) map_patl
    in 
    (* translate all expression of the list, and place the results in var_c[i]*)
@@ -224,14 +218,12 @@ let tr_expr e env (cstrs:int Clj.CstrTbl.t) =
 
       | Clj.Cstr(c, el) ->
          let nb_expr = List.length el in
-         if nb_expr > 0 then
-            let var_c = new_var @@ String.lowercase_ascii c in
-            Imp.([Set(var_c, array_create(Int (1+nb_expr)))] @
-               [array_set (Var var_c) (Int 0) (Int (Clj.CstrTbl.find c cstrs))] @
-               tr_expr_lst var_c el env
-            ), Var var_c
-         else
-            [], Int (Clj.CstrTbl.find c cstrs)
+         let var_c = new_var @@ String.lowercase_ascii c in
+         Imp.([Set(var_c, array_create(Int (1+nb_expr)))] @
+            [array_set (Var var_c) (Int 0) (Int (Clj.CstrTbl.find c cstrs))] @
+            tr_expr_lst var_c el env
+         ), Var var_c
+
 
       | Clj.Match(e, casel) ->
          let is1, te1 = tr_expr e env in 
