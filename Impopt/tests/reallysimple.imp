@@ -1,16 +1,13 @@
 function print(arg1, arg2){
     var local1;
     local1 = arg1 + arg2;
-    putint(local1);
-    putint(arg1);
-    putint(arg2);
     if (local1 < 10){
-        putchar(97);
+        putint(2);
     }else{
-        putchar(98);
+        putint(42);
     }
 }
 
 function main(){
-    print(10,10);
+    print(5,6);
 }

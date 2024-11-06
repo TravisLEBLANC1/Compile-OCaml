@@ -15,9 +15,8 @@ function main(arg) {
   c = 2;
   d = 3;
   e = 4;
-  f = 5;
+  f = 21;
   g = 6;
-  h = 7;
   
   while(a < 5){
     if (a + 2 < 6) {
