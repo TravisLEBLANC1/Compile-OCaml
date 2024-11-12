@@ -1,0 +1,56 @@
+function g(a,b){
+    var c;
+    var d;
+    var e;
+    var f;
+    c = a + b;
+    d = a;
+    e = b;
+    f = c+e+d;
+    if(d < e){
+        return c;
+    }else{
+        d = d + 1;
+        return d;
+    }
+    return f+b;
+    
+}
+
+
+function f(a) {
+    var b;
+    var c;
+    var tmp;
+
+    b = a;
+    c = a+1;
+    tmp = g(b,c);
+    putint(b);
+    putchar(10);
+    putint(c);
+    putchar(10);
+    putint(a);
+    putchar(10);
+    return tmp;
+}
+
+function main(){
+    var a;
+    var b;
+    var c;
+    var d;
+    a = 10;
+    b = 12;
+    c = 13;
+    d = 14;
+    f(2);
+    putint(a);
+    putchar(10);
+    putint(b);
+    putchar(10);
+    putint(c);
+    putchar(10);
+    putint(d);
+    putchar(10);
+}

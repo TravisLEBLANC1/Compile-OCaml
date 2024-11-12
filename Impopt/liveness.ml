@@ -27,7 +27,7 @@ let liveness fdef =
       | Set(s, e) -> VSet.union (VSet.remove s lv_out) (use_expr e)
       | If(e, li1, li2) -> 
         let tmp = VSet.union (lv_in_list li1 lv_out) (lv_in_list li2 lv_out) in
-        VSet.union tmp (use_expr e)
+        VSet.union (VSet.union tmp lv_out) (use_expr e)
       | While(e, li) -> 
         let tmp_in = VSet.union (use_expr e) lv_out in
         let tmp_out = lv_in_list li tmp_in in

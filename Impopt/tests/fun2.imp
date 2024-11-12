@@ -1,0 +1,50 @@
+function mul(a,b){
+    var res;
+    var i;
+    i = 0;
+    res = 0;
+    while(i < b){
+        res = res + a;
+        i = i + 1;
+    }
+    return res;
+}
+
+function sum(a,b){
+    var resi;
+    var resj;
+    var i;
+    var j;
+    i = 0;
+    resi = 0;
+    while(i < b){
+        resi = resi + 1;
+        i = i + 1;
+    }
+    j = 0;
+    resj = 0;
+    while(j < a){
+        resj = resj + 1;
+        j = j + 1;
+    }
+    return resi + resj;
+}
+
+
+function max(a, b){
+    var c;
+    var d;
+    c = a+200;
+    d = b+200;
+    if(c < d){
+        return b;
+    }else{
+        return a;
+    }
+}
+
+
+function main(){
+    putint(sum(10, mul(5,2)));
+    putchar(10);
+}

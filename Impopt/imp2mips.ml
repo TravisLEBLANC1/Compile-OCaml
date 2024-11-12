@@ -14,7 +14,7 @@ let tmp_regs = [| t0; t1; t2; t3; t4; t5; t6; t7; t8; t9 |]
 let nb_tmp_regs = Array.length tmp_regs
 
 let var_regs = [| s0; s1; s2; s3; s4; s5; s6; s7 |]
-let nb_var_regs = Array.length var_regs
+let nb_var_regs = 4  (* Array.length var_regs *)
 
 let push reg = subi sp sp 4 @@ sw reg 0(sp)
 let pop  reg = lw reg 0(sp) @@ addi sp sp 4
@@ -132,11 +132,16 @@ let tr_function fdef =
     fun () -> incr cpt; Printf.sprintf "__%s_%i" fdef.name !cpt
   in
 
-  (* Generate MIPS code for an Imp instruction or sequence. *)
+  (* Generate MIPS code for sequence of Imp instruction. *)
   let rec tr_seq = function
     | []   -> nop
     | i::s -> tr_instr i @@ tr_seq s
-
+  (* MIPS instructions to put at the end of the function*)
+  and tr_cleaning = fun () -> 
+    restore_var r_max 
+    @@ addi sp sp (4 * spill_count) 
+    @@ addi sp fp (-4) @@ pop ra @@ pop fp 
+  (* generate MIPS codefor an Imp instruction *)
   and tr_instr i = match i with
     | Putint(e) -> tr_expr 0 e @@ move a0 t0 @@ li v0 1 @@ syscall
     | Putchar(e) -> tr_expr 0 e @@ move a0 t0 @@ li v0 11 @@ syscall
@@ -166,8 +171,10 @@ let tr_function fdef =
        (* fall through *)
 
     (* Return from a call with a value. Includes cleaning the stack. *)
-    | Return(e) -> tr_expr 0 e @@ addi sp fp (-4) @@ pop ra @@ pop fp @@ jr ra
+    | Return(e) -> 
+      tr_expr 0 e @@ tr_cleaning () @@ jr ra
     | Expr(e) -> tr_expr 0 e
+
   in
 
   (* Mips code for the function itself. 
@@ -175,14 +182,12 @@ let tr_function fdef =
      the function, then restore callee-saved, clean the stack and returns with a 
      dummy value if no explicit return met. *)
   push fp @@ push ra @@ addi fp sp 4
-  (* TODO: replace the following, to save callee-saved registers and allocate 
-     the right number of slots on the stack for spilled local variables *)
-  @@ save_var r_max
   @@ addi sp sp (-4 * spill_count)
+  @@ save_var r_max 
   @@ tr_seq fdef.code
-  @@ restore_var r_max
-  @@ addi sp fp (-4) 
-  @@ pop ra @@ pop fp @@ li t0 0 @@ jr ra
+  @@ tr_cleaning ()
+  @@ li t0 0 
+  @@ jr ra
 
 (* Generate Mips code for an Imp program. *)
 let translate_program prog =
