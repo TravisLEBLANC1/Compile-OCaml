@@ -1,7 +1,7 @@
 var retour;
 var espace;
 
-function main(arg) {
+function circle(arg) {
   var i;
   i = 0;
   retour = 10;
@@ -27,4 +27,8 @@ function affiche_ligne(i, n) {
     j = j+1;
   }
   putchar(retour);
+}
+
+main{
+  circle(12);
 }

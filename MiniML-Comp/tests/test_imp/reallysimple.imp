@@ -8,6 +8,6 @@ function print(arg1, arg2){
     }
 }
 
-function main(){
+main {
     print(5,6);
 }

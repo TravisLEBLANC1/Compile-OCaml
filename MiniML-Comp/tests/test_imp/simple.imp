@@ -29,6 +29,4 @@ main{
   result = a + b + c + d + e + f + g;
   putchar(10);
   putint(result);
-  result = a + b + c + d + e + f + g;
-  return result;
 }
