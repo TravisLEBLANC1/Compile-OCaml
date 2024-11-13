@@ -58,6 +58,7 @@ let pp_program prog out_channel =
   let print_margin () = for _ = 1 to 2 * !margin do print " " done in
   
   let rec pp_instruction = function
+    | Putint e -> print "putint(%s)" (pp_expression e)
     | Putchar(e) ->
       print "putchar(%s);" (pp_expression e)
     | Set(x, e) ->

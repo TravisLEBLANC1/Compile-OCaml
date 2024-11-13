@@ -14,7 +14,7 @@ let tmp_regs = [| t0; t1; t2; t3; t4; t5; t6; t7; t8; t9 |]
 let nb_tmp_regs = Array.length tmp_regs
 
 let var_regs = [| s0; s1; s2; s3; s4; s5; s6; s7 |]
-let nb_var_regs = 4  (* Array.length var_regs *)
+let nb_var_regs = Array.length var_regs
 
 let push reg = subi sp sp 4 @@ sw reg 0(sp)
 let pop  reg = lw reg 0(sp) @@ addi sp sp 4
@@ -191,29 +191,78 @@ let tr_function fdef =
 
 (* Generate Mips code for an Imp program. *)
 let translate_program prog =
-  let init = 
-    beqz a0 "init_end" @@ lw a0 0(a1) @@ jal "atoi"
-    @@ label "init_end" @@ push v0
-    @@ jal "main"
-    @@ li v0 10 @@ syscall
+  let init =
+    beqz a0 "init_end"
+    @@ lw a0 0 a1
+    @@ jal "atoi"
+    @@ la t0 "arg"
+    @@ sw v0 0 t0
+    @@ label "init_end"
+  and close =
+    li v0 10
+    @@ syscall
   and built_ins =
     comment "built-in atoi"
-    @@ label "atoi" @@ li v0 0
-    @@ label "atoi_loop" @@ lbu t0 0(a0) @@ beqz t0 "atoi_end"
-    @@ addi t0 t0 (-48) @@ bltz t0 "atoi_error" @@ bgei t0 10 "atoi_error"
-    @@ muli v0 v0 10 @@ add v0 v0 t0 @@ addi a0 a0 1 @@ b "atoi_loop"
-    @@ label "atoi_error" @@ li v0 10 @@ syscall
-    @@ label "atoi_end" @@ jr ra
+    @@ label "atoi"
+    @@ move t0 a0
+    @@ li   t1 0
+    @@ li   t2 10
+    @@ label "atoi_loop"
+    @@ lbu  t3 0 t0
+    @@ beq  t3 zero "atoi_end"
+    @@ li   t4 48
+    @@ blt  t3 t4 "atoi_error"
+    @@ li   t4 57
+    @@ bgt  t3 t4 "atoi_error"
+    @@ addi t3 t3 (-48)
+    @@ mul  t1 t1 t2
+    @@ add  t1 t1 t3
+    @@ addi t0 t0 1
+    @@ b "atoi_loop"
+    @@ label "atoi_error"
+    @@ li   v0 10
+    @@ syscall
+    @@ label "atoi_end"
+    @@ move v0 t1
+    @@ jr   ra
+
+    @@ comment "built-in print_int"
+    @@ label "print_int"
+    @@ lw a0 4 sp
+    @@ li v0 1
+    @@ syscall
+    @@ sw a0 0 sp
+    @@ subi sp sp 4
+    @@ jr ra
+  
+    @@ comment "built-in power"
+    @@ label "power"
+    @@ lw s0 8 sp
+    @@ lw s1 4 sp
+    @@ li t0 1
+    @@ b "power_loop_guard"
+    @@ label "power_loop_code"
+    @@ mul t0 t0 s1
+    @@ subi s0 s0 1
+    @@ label "power_loop_guard"
+    @@ bgtz s0 "power_loop_code"
+    @@ sw t0 0 sp
+    @@ subi sp sp 4
+    @@ jr ra
+
   in
 
-  let function_codes = List.fold_left
-    (fun code fdef -> code @@ label fdef.name @@ tr_function fdef)
-    nop prog.functions
+  let main_code = tr_seq prog.main empty_allocation_context in
+  let function_codes = List.fold_right
+    (fun fdef code ->
+      label fdef.name @@ tr_function fdef @@ code)
+    prog.functions nop
   in
-  let text = init @@ function_codes @@ built_ins in
-  let data = List.fold_left
-      (fun code id -> code @@ label id @@ dword [0])
-      nop prog.globals
+  let text = init @@ main_code @@ close @@ function_codes @@ built_ins
+  and data = List.fold_right
+    (fun id code -> label id @@ dword [0] @@ code)
+    prog.globals (label "arg" @@ dword [0])
   in
-  
+  print_string "imp2mips done\n";
   { text; data }
+

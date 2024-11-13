@@ -11,5 +11,8 @@
   miniml
   mips
   ops
-  typechecker)
+  typechecker
+  linearscan
+  liveness
+  nimp)
 )
