@@ -263,7 +263,7 @@ let translate_program prog =
   (* Variables of the main expression are the global variables of the program *)
   let is, te, globals = tr_expr Clj.(prog.code) (STbl.empty) (prog.cstrs) in
   (* Main code ends after printing the result of the main expression *)
-  let main = Imp.(is @ [Expr(Call("print_int", [te]))]) in
+  let main = Imp.(is @ [Putint(te)]) in
   print_string "clj2imp done\n";
   Imp.({main; functions; globals})
     

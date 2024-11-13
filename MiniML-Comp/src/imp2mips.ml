@@ -248,15 +248,6 @@ let translate_program prog =
     @@ label "atoi_end"
     @@ move v0 t1
     @@ jr   ra
-
-    @@ comment "built-in print_int"
-    @@ label "print_int"
-    @@ lw a0 4 sp
-    @@ li v0 1
-    @@ syscall
-    @@ sw a0 0 sp
-    @@ subi sp sp 4
-    @@ jr ra
   
     @@ comment "built-in power"
     @@ label "power"
