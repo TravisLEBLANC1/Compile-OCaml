@@ -1,0 +1,13 @@
+function print(arg1, arg2){
+    var local1;
+    local1 = arg1 + arg2;
+    if (local1 < 10){
+        putint(2);
+    }else{
+        putint(42);
+    }
+}
+
+function main(){
+    print(5,6);
+}
