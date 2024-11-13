@@ -1,6 +1,6 @@
 
 .PRECIOUS: bin/minimlc.exe bin/impc.exe # to not destroy the exe
-MARS=java -jar ../../Mars/Mars4_5.jar
+MARS=java -jar ../Mars/Mars4_5.jar
 
 %.exe:
 	@dune build
