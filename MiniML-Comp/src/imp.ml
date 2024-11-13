@@ -18,6 +18,7 @@ type expression =
   | Sbrk  of expression (* primitive for heap extension *)
       
 type instruction =
+  | Putint  of expression (*added putint*)
   | Putchar of expression
   | Set     of string * expression
   | If      of expression * sequence * sequence

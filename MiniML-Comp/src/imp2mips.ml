@@ -2,45 +2,59 @@ open Imp
 open Ops
 open Mips
 
+let tmp_regs = [| t0; t1; t2; t3; t4; t5; t6; t7; t8; t9 |]
+let nb_tmp_regs = Array.length tmp_regs
+
+let var_regs = [| s0; s1; s2; s3; s4; s5; s6; s7 |]
+let nb_var_regs = Array.length var_regs
+
+(*TODO pourquoi ce n'est pas le même push et pop?*)
 let push reg = sw reg 0 sp  @@ subi sp sp 4
 let pop  reg = addi sp sp 4 @@ lw reg 0 sp
+
+let rec    save regs k = if k < 0 then nop else save regs (k-1) @@ push regs.(k)
+let rec restore regs k = if k < 0 then nop else    pop regs.(k) @@ restore regs (k-1)
+
+let    save_tmp = save    tmp_regs
+let restore_tmp = restore tmp_regs
+
+let save_var = save var_regs
+let restore_var = restore var_regs
+
+
 
 let new_label =
   let cpt = ref (-1) in
   fun () -> incr cpt; Printf.sprintf "__label_%i" !cpt
         
 type allocation_info =
-  | Local of int
-  | Param of int
+  | Reg   of string  (* name of the register *)
+  | Stack of int     (* offset on the stack, relative to fp *)
 
 module STbl = Map.Make(String)
       
 type allocation_context = {
-  allocation: allocation_info STbl.t;
-  nb_locals: int
+  alloc: allocation_info STbl.t;
+  r_max: int;
+  spill_count:int;
 }
 
-let empty_allocation_context = { allocation = STbl.empty;
-                                 nb_locals = 0; }
+let empty_allocation_context = { alloc = STbl.empty;
+                                 r_max = 0;
+                                 spill_count = 0; }
     
 let mk_allocation_context fdef =
-  let nb_params = List.length fdef.params in
-  let nb_locals = List.length fdef.locals in
-
-  let allocation = List.fold_right
-    (let count = ref nb_params in
-     fun id alloc -> STbl.add id (decr count; Param !count) alloc)
-    fdef.params
-    STbl.empty
+  let nfdef = Nimp.from_imp_fdef fdef in
+  let allocation = ref STbl.empty in
+  let raw_alloc, r_max, spill_count = Linearscan.lscan_alloc nb_var_regs nfdef in
+  let add_in_alloc id raw = match raw with
+    | Linearscan.RegN n -> allocation := STbl.add id (Reg var_regs.(n)) !allocation
+    | Linearscan.Spill n ->  allocation := STbl.add id (Stack (-4*(n+2)))  !allocation
   in
-  let allocation = List.fold_right
-    (let count = ref (-1) in
-     fun id alloc -> STbl.add id (incr count; Local !count) alloc)
-    fdef.locals
-    allocation
-  in
-  
-  { allocation; nb_locals }
+  Linearscan.print_list_raw raw_alloc; (* print raw alloc*)
+  Hashtbl.iter add_in_alloc raw_alloc; (*add locals in alloc*)
+  List.iteri (fun k id -> allocation := STbl.add id (Stack(4*(k+1))) !allocation) fdef.params; (*add params in alloc*)
+  {alloc=(!allocation); r_max; spill_count}
 
 (* Intègre une optimisation : le résultat est placé par défaut dans $t0
    plutôt que systématiquement sur la pile *)
@@ -53,9 +67,9 @@ let rec tr_expr e ctx = match e with
 
   | Var(id) -> begin
     try
-      match STbl.find id ctx.allocation with
-        | Param n -> lw t0 (4*(n+1)) fp
-        | Local n -> lw t0 (-4*(n+2)) fp
+      match STbl.find id ctx.alloc with
+        | Reg r -> move t0 r
+        | Stack offset -> lw t0 offset(fp)
     with
       | Not_found -> la t0 id @@ lw t0 0 t0
   end
@@ -114,18 +128,26 @@ let rec tr_expr e ctx = match e with
 
   | Sbrk(e) ->
     tr_expr e ctx @@ move a0 t0 @@ li v0 9 @@ syscall @@ move t0 v0
-
       
+(* MIPS instructions to put at the end of the function*)
+let tr_cleaning ctx =  
+  restore_var ctx.r_max 
+  @@ move sp fp    (* Désallocation de la pile *)
+  @@ lw ra (-4) fp (* Récupération de l'adresse de retour *)
+  @@ lw fp 0 fp    (* Restauration du pointeur de base de l'appelant *)
+    
+
 let rec tr_instr i ctx = match i with
+  | Putint(e) -> tr_expr e ctx @@ move a0 t0 @@ li v0 1 @@ syscall
   | Putchar(e) ->
     tr_expr e ctx @@ move a0 t0 @@ li v0 11 @@ syscall
         
   | Set(id, e) ->
     let set_code =
       try
-        match STbl.find id ctx.allocation with
-          | Param n -> sw t0 (4*(n+1)) fp
-          | Local n -> sw t0 (-4*(n+2)) fp
+        match STbl.find id ctx.alloc with
+          | Reg r -> move r t0 
+          | Stack offset -> sw t0 offset(fp)
       with
         | Not_found -> la t1 id @@ sw t0 0 t1
     in
@@ -156,9 +178,7 @@ let rec tr_instr i ctx = match i with
         
   | Return(e) ->
     tr_expr e ctx
-    @@ move sp fp    (* Désallocation de la pile *)
-    @@ lw ra (-4) fp (* Récupération de l'adresse de retour *)
-    @@ lw fp 0 fp    (* Restauration du pointeur de base de l'appelant *)
+    @@ tr_cleaning ctx
     @@ jr ra
 
   | Write(d, e) ->
@@ -178,20 +198,18 @@ and tr_seq s ctx = match s with
     | [i]  -> tr_instr i ctx
     | i::s -> tr_instr i ctx @@ tr_seq s ctx
 
-
 let tr_function fdef =
   let context = mk_allocation_context fdef in
   push fp
   @@ push ra
   @@ addi fp sp 8
-  @@ addi sp sp (-4 * context.nb_locals)
+  @@ addi sp sp (-4 * context.spill_count)
+  @@ save_var context.r_max
   @@ tr_seq fdef.code context
   (* @@ ici, erreur, on n'a pas croisé de return *)
   (* Pour éviter trop de corruption, on renvoie 0 *)
+  @@ tr_cleaning context
   @@ li t0 0
-  @@ move sp fp    (* Désallocation de la pile *)
-  @@ lw ra (-4) fp (* Récupération de l'adresse de retour *)
-  @@ lw fp 0 fp    (* Restauration du pointeur de base de l'appelant *)
   @@ jr ra
 
     
