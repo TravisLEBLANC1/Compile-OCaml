@@ -6,7 +6,8 @@
     let keyword_or_ident =
     let h = Hashtbl.create 17 in
     List.iter (fun (s, k) -> Hashtbl.add h s k)
-      [ "putchar",  PUTCHAR;
+      [ "putint",   PUTINT;
+        "putchar",  PUTCHAR;
         "if",       IF;
         "else",     ELSE;
         "while",    WHILE;

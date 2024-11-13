@@ -11,5 +11,5 @@ MARS=java -jar ../../Mars/Mars4_5.jar
 	@$(MARS) tests/test_comp/$@.asm
 
 clean:
-	rm -f tests/*/*.asm tests/*/*.imp
+	rm -f tests/*/*.asm tests/test_comp/*.imp tests/test_typecheck/*.imp
 	dune clean
