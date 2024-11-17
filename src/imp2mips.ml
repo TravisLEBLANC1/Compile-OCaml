@@ -8,7 +8,6 @@ let nb_tmp_regs = Array.length tmp_regs
 let var_regs = [| s0; s1; s2; s3; s4; s5; s6; s7 |]
 let nb_var_regs = Array.length var_regs
 
-(*TODO pourquoi ce n'est pas le même push et pop?*)
 let push reg = sw reg 0 sp  @@ subi sp sp 4
 let pop  reg = addi sp sp 4 @@ lw reg 0 sp
 
@@ -50,7 +49,6 @@ let mk_allocation_context nfdef =
     | Linearscan.RegN n -> allocation := STbl.add id (Reg var_regs.(n)) !allocation
     | Linearscan.Spill n ->  allocation := STbl.add id (Stack (-4*(n+2)))  !allocation
   in
-  Linearscan.print_list_raw raw_alloc; (* print raw alloc*)
   Hashtbl.iter add_in_alloc raw_alloc; (*add locals in alloc*)
   List.iteri (fun k id -> allocation := STbl.add id (Stack(4*(k+1))) !allocation) nfdef.params; (*add params in alloc*)
   {alloc=(!allocation); r_max; spill_count }, liveness_map
@@ -203,15 +201,13 @@ let filter_code (nfdef:Nimp.function_def) liveness_map :Nimp.sequence =
       begin
       match Liveness.VMap.find_opt x liveness_map with
         | Some(_, high) -> 
-          if high <= i.nb then (
-            print_string ("erase"^x^"\n");
-            Nimp.({nb; instr=Expr(e)}) ) (*local dead set*)
+          if high <= i.nb then 
+            Nimp.({nb; instr=Expr(e)})  (*local dead set*)
           else 
             Nimp.({nb; instr=Set(x,e)}) (* local set (not dead)*)
         | None -> 
-          if List.exists (fun y -> y=x) (nfdef.locals @ nfdef.params) then(
-            print_string ("erase"^x^"\n");
-            Nimp.({nb; instr=Expr(e)}) (*local dead variable*))
+          if List.exists (fun y -> y=x) (nfdef.locals @ nfdef.params) then
+            Nimp.({nb; instr=Expr(e)}) (*local dead variable*)
           else 
             Nimp.({nb; instr=Set(x,e)}) (*global set (we should not erase it)*)
       end

@@ -47,8 +47,6 @@ let print_list_raw rawtable = List.iter print_raw_alloc (hastbl_to_list rawtable
    used registers, and the number of used stack slots (spills) *)
 let lscan_alloc nb_regs fdef =
   let live_intervals, vmap = Liveness.liveness_intervals_from_liveness fdef in (*list of the variables with their corresponding intervals*)
-  printf "\nfunction %s: \n" fdef.name;
-  print_intervals live_intervals;
   let alloc = Hashtbl.create (List.length fdef.locals) in (* associate variable to his "raw_alloc"*)
   let active = ref [] in (* temporary list of active variables? *)
   let free = ref (List.init nb_regs (fun i -> i)) in (* temporary list of free registers*) 

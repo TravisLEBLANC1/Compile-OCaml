@@ -100,10 +100,7 @@ let typ_expr (e: expr) (senv: senv) =
       end
     | Var(x) -> 
       if not @@ Env.mem x tenv then
-        begin
-        printf "%s\n" x;
-        failwith "variable not found"
-        end
+        failwith ("variable " ^x^ " not found")
       else
         Env.find x tenv
     | Let(x, e1, e2) ->

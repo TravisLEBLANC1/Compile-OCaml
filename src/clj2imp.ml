@@ -191,9 +191,6 @@ let tr_expr e env (cstrs:int Clj.CstrTbl.t) =
       
       | Clj.MkClj(fun_name, varlist) ->
          let var_cl = new_var "closure" in 
-         print_string fun_name;
-         print_varlist varlist;
-         print_string "\n";
          Imp.([Set(var_cl, array_create (Int (1+List.length varlist)))] @
               [array_set (Var var_cl) (Int 0) (Addr fun_name)] @ 
               tr_varlist var_cl varlist env
@@ -201,9 +198,6 @@ let tr_expr e env (cstrs:int Clj.CstrTbl.t) =
       
       | Clj.Fix(f, Clj.MkClj(fun_name, varlist)) ->
          let var_cl = new_var "closure" in 
-         print_string fun_name;
-         print_varlist varlist;
-         print_string "\n";
          Imp.([Set(var_cl, array_create (Int (1+List.length varlist)))] @
               [array_set (Var var_cl) (Int 0) (Addr fun_name)] @ 
               tr_varlist var_cl varlist (STbl.add f var_cl env)
