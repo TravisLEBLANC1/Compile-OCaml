@@ -25,7 +25,7 @@ let restore_var = restore var_regs
 let new_label =
   let cpt = ref (-1) in
   fun () -> incr cpt; Printf.sprintf "__label_%i" !cpt
-        
+
 type allocation_info =
   | Reg   of string  (* name of the register *)
   | Stack of int     (* offset on the stack, relative to fp *)
@@ -95,8 +95,8 @@ let rec tr_expr e ctx = match e with
       | Le   -> sle
       | Gt   -> sgt
       | Ge   -> sge
-      | And  -> and_
-      | Or   -> or_
+      | And  -> and_ 
+      | Or   -> or_ 
       | Pair -> failwith "pair not implemented in imp2mips"
       in
     tr_expr e2 ctx @@ push t0 @@ tr_expr e1 ctx @@ pop t1 @@ op t0 t0 t1      
@@ -125,7 +125,37 @@ let rec tr_expr e ctx = match e with
 
   | Sbrk(e) ->
     tr_expr e ctx @@ move a0 t0 @@ li v0 9 @@ syscall @@ move t0 v0
-      
+  
+and tr_bool_op e ctx label_true label_false= match e with 
+  | Binop(bop, e1, e2) -> 
+    begin
+    match bop with
+      | And -> tr_and e1 e2 ctx label_true label_false
+      | Or -> tr_or e1 e2 ctx label_true label_false
+      | Eq | Lt | Le | Gt | Ge  -> tr_expr e ctx @@ bnez t0 label_true @@ b label_false
+      | Neq -> tr_expr e ctx @@ bnez t0 label_false @@ b label_true        
+      | _ -> failwith "is not a boolean bop"
+    end
+  | Unop(uop, e) -> 
+    begin 
+    match uop with 
+      | Not -> tr_bool_op e ctx label_false label_true
+      | _ -> failwith "is not a boolean uop"
+    end
+  | _ -> tr_expr e ctx @@ bnez t0 label_true @@ b label_false
+
+and tr_and e1 e2 ctx label_true label_false = 
+  let internal_label_true = new_label () in 
+  tr_bool_op e1 ctx internal_label_true label_false
+  @@ label internal_label_true
+  @@ tr_bool_op e2 ctx label_true label_false
+
+and tr_or e1 e2 ctx label_true label_false = 
+let internal_label_false = new_label () in 
+  tr_bool_op e1 ctx label_true internal_label_false
+  @@ label internal_label_false
+  @@ tr_bool_op e2 ctx label_true label_false
+
 (* MIPS instructions to put at the end of the function*)
 let tr_cleaning ctx =  
   restore_var ctx.r_max 
@@ -151,14 +181,15 @@ let rec tr_instr (i:Imp.instruction) ctx = match i with
         
   | If(c, s1, s2) ->
     let then_label = new_label()
+    and else_label = new_label()
     and end_label = new_label()
     in
-    tr_expr c ctx
-    @@ bnez t0 then_label
-    @@ tr_seq s2 ctx
-    @@ b end_label
+    tr_bool_op c ctx then_label else_label
     @@ label then_label
     @@ tr_seq s1 ctx
+    @@ b end_label
+    @@ label else_label
+    @@ tr_seq s2 ctx
     @@ label end_label
         
   | While(c, s) ->

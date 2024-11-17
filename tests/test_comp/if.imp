@@ -1,0 +1,16 @@
+var var_if_1;
+var var_if_0;
+
+main {
+  if ((6<=7)) {
+    if ((6>7)) {
+      var_if_0 = 6;
+    } else {
+      var_if_0 = 7;
+    }
+    var_if_1 = var_if_0;
+  } else {
+    var_if_1 = 8;
+  }
+  putint((6*var_if_1));
+}
