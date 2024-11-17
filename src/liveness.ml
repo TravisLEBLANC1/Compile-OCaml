@@ -73,5 +73,5 @@ let liveness_intervals_from_liveness fdef =
   (*first we create the vmap according the the liveness*)
   Array.iteri update_vmap live;
   (* then we create the list in the right way ie (string, int, int) list*)
-  VMap.fold (fun s (low, high) acc -> (s, low, high)::acc) !vmap []
+  VMap.fold (fun s (low, high) acc -> (s, low, high)::acc) !vmap [], !vmap
 

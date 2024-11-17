@@ -77,3 +77,19 @@ let from_imp_fdef fdef =
 let from_imp_program p =
   { globals = Imp.(p.globals);
     functions = List.map from_imp_fdef Imp.(p.functions) }
+
+let from_nimp_code (code:sequence) :Imp.sequence= 
+  let rec from_nimp_instr (i:instruction) :Imp.instruction= match i.instr with 
+    | Putint e  -> Imp.Putint(e)
+    | Putchar e -> Imp.Putchar(e)
+    | Set(x, e) -> Imp.Set(x, e)
+    | Expr e    -> Imp.Expr(e)
+    | Return e  -> Imp.Return(e)
+    | While(e, is1) -> Imp.While(e, from_nimp_list is1)
+    | If(e, is1, is2) -> Imp.If(e, from_nimp_list is1, from_nimp_list is2)
+    | Write(e1, e2) -> Imp.Write(e1, e2)
+  and from_nimp_list (li:sequence):Imp.sequence = match li with
+    | []   -> []
+    | i::l -> (from_nimp_instr i):: from_nimp_list l
+  in
+  from_nimp_list code

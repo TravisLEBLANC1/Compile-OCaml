@@ -41,20 +41,19 @@ type allocation_context = {
 
 let empty_allocation_context = { alloc = STbl.empty;
                                  r_max = 0;
-                                 spill_count = 0; }
+                                 spill_count = 0;}
     
-let mk_allocation_context fdef =
-  let nfdef = Nimp.from_imp_fdef fdef in
+let mk_allocation_context nfdef =
   let allocation = ref STbl.empty in
-  let raw_alloc, r_max, spill_count = Linearscan.lscan_alloc nb_var_regs nfdef in
+  let raw_alloc, r_max, spill_count, liveness_map = Linearscan.lscan_alloc nb_var_regs nfdef in
   let add_in_alloc id raw = match raw with
     | Linearscan.RegN n -> allocation := STbl.add id (Reg var_regs.(n)) !allocation
     | Linearscan.Spill n ->  allocation := STbl.add id (Stack (-4*(n+2)))  !allocation
   in
   Linearscan.print_list_raw raw_alloc; (* print raw alloc*)
   Hashtbl.iter add_in_alloc raw_alloc; (*add locals in alloc*)
-  List.iteri (fun k id -> allocation := STbl.add id (Stack(4*(k+1))) !allocation) fdef.params; (*add params in alloc*)
-  {alloc=(!allocation); r_max; spill_count}
+  List.iteri (fun k id -> allocation := STbl.add id (Stack(4*(k+1))) !allocation) nfdef.params; (*add params in alloc*)
+  {alloc=(!allocation); r_max; spill_count }, liveness_map
 
 (* Intègre une optimisation : le résultat est placé par défaut dans $t0
    plutôt que systématiquement sur la pile *)
@@ -135,9 +134,8 @@ let tr_cleaning ctx =
   @@ move sp fp    (* Désallocation de la pile *)
   @@ lw ra (-4) fp (* Récupération de l'adresse de retour *)
   @@ lw fp 0 fp    (* Restauration du pointeur de base de l'appelant *)
-    
 
-let rec tr_instr i ctx = match i with
+let rec tr_instr (i:Imp.instruction) ctx = match i with
   | Putint(e) -> tr_expr e ctx @@ move a0 t0 @@ li v0 1 @@ syscall
   | Putchar(e) ->
     tr_expr e ctx @@ move a0 t0 @@ li v0 11 @@ syscall
@@ -198,14 +196,33 @@ and tr_seq s ctx = match s with
     | [i]  -> tr_instr i ctx
     | i::s -> tr_instr i ctx @@ tr_seq s ctx
 
+
+let filter_code ncode liveness_map :Nimp.sequence = 
+  let filter_instr i = match i with
+    | Nimp.({nb; instr=Set(x,e)}) -> 
+      begin
+      match Liveness.VMap.find_opt x liveness_map with
+        | Some(_, high) -> 
+          if high <= i.nb then 
+            Nimp.({nb; instr=Expr(e)}) 
+          else 
+            Nimp.({nb; instr=Set(x,e)})
+        | None -> Nimp.({nb; instr=Expr(e)})
+      end
+    | _  -> i
+  in 
+  List.map filter_instr ncode
+
 let tr_function fdef =
-  let context = mk_allocation_context fdef in
+  let nfdef = Nimp.from_imp_fdef fdef in
+  let context, liveness_map = mk_allocation_context nfdef in
+  let filtered_code = Nimp.from_nimp_code (filter_code nfdef.code liveness_map) in
   push fp
   @@ push ra
   @@ addi fp sp 8
   @@ addi sp sp (-4 * context.spill_count)
   @@ save_var context.r_max
-  @@ tr_seq fdef.code context
+  @@ tr_seq filtered_code context
   (* @@ ici, erreur, on n'a pas croisé de return *)
   (* Pour éviter trop de corruption, on renvoie 0 *)
   @@ tr_cleaning context

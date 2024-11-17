@@ -1,0 +1,56 @@
+var tmp_5;
+var closure_4;
+var g_3;
+var closure_2;
+var f_1;
+var p_0;
+
+function fun_3(param_x,closure) {
+  var closure_0;
+
+  closure_0 = malloc((3*4));
+  *closure_0 = &fun_2;
+  closure_0[1] = closure[1];
+  closure_0[2] = param_x;
+  return(closure_0);
+}
+
+function fun_2(param_y,closure) {
+  var closure_0;
+
+  closure_0 = malloc((4*4));
+  *closure_0 = &fun_1;
+  closure_0[1] = closure[1];
+  closure_0[2] = param_y;
+  closure_0[3] = closure[2];
+  return(closure_0);
+}
+
+function fun_1(param_z,closure) {
+  return((((closure[3]+closure[2])+param_z)+closure[1]));
+}
+
+function fun_0(param_z,closure) {
+  var tmp_2;
+  var tmp_1;
+  var tmp_0;
+
+  tmp_2 = closure[1];
+  tmp_1 = (**tmp_2)(24,tmp_2);
+  tmp_0 = (**tmp_1)(2,tmp_1);
+  return((**tmp_0)(param_z,tmp_0));
+}
+
+main {
+  p_0 = 6;
+  closure_2 = malloc((2*4));
+  *closure_2 = &fun_3;
+  closure_2[1] = p_0;
+  f_1 = closure_2;
+  closure_4 = malloc((2*4));
+  *closure_4 = &fun_0;
+  closure_4[1] = f_1;
+  g_3 = closure_4;
+  tmp_5 = g_3;
+  putint((**tmp_5)(10,tmp_5));
+}

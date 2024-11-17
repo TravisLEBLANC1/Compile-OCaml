@@ -1,14 +1,14 @@
-var a;
-var b;
-var c;
-var d;
-var e;
-var f;
-var g;
-var h;
-var result;
 
-main{
+function f(){
+  var a;
+  var b;
+  var c;
+  var d;
+  var e;
+  var f;
+  var g;
+  var h;
+  var result;
   a = 0;
   b = 1;
   c = 2;
@@ -16,7 +16,7 @@ main{
   e = 4;
   f = 21;
   g = 6;
-  
+  h = a + b;
   while(a < 5){
     if (a + 2 < 6) {
       putint(a);
@@ -29,4 +29,8 @@ main{
   result = a + b + c + d + e + f + g;
   putchar(10);
   putint(result);
+}
+
+main{
+  f();
 }
