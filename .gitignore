@@ -1,5 +1,6 @@
 _build/
 *.exe
 *.asm
-MiniML-Comp/tests/test_comp/*.imp
-MiniML-Comp/tests/test_typecheck/*.imp
+tests/test_comp/cstr1.imp
+tests/test_comp/*.imp
+tests/test_typecheck/*.imp

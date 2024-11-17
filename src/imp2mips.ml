@@ -98,9 +98,22 @@ let rec tr_expr e ctx = match e with
       | And  -> and_ 
       | Or   -> or_ 
       | Pair -> failwith "pair not implemented in imp2mips"
-      in
-    tr_expr e2 ctx @@ push t0 @@ tr_expr e1 ctx @@ pop t1 @@ op t0 t0 t1      
-
+    in begin
+    match bop with 
+    | And | Or ->
+      (* lazy bool operation but we want a value at the end*)
+      let label_true  = new_label()
+      and label_false = new_label() 
+      and label_end   = new_label() in 
+      tr_bool_op e ctx label_true label_false
+      @@ label label_true
+      @@ li t0 1 (*true = 1*)
+      @@ b label_end
+      @@ label label_false
+      @@ li t0 0 (*false = 0*)
+      @@ label label_end
+    | _ -> tr_expr e2 ctx @@ push t0 @@ tr_expr e1 ctx @@ pop t1 @@ op t0 t0 t1      
+    end
   | Call(id, params) ->
     let params_code =
       List.fold_right
@@ -194,14 +207,15 @@ let rec tr_instr (i:Imp.instruction) ctx = match i with
         
   | While(c, s) ->
     let test_label = new_label()
+    and end_label = new_label()
     and code_label = new_label()
     in
     b test_label
     @@ label code_label
     @@ tr_seq s ctx
     @@ label test_label
-    @@ tr_expr c ctx
-    @@ bnez t0 code_label
+    @@ tr_bool_op c ctx code_label end_label
+    @@ label end_label
         
   | Return(e) ->
     tr_expr e ctx
@@ -232,7 +246,7 @@ let filter_code (nfdef:Nimp.function_def) liveness_map :Nimp.sequence =
       begin
       match Liveness.VMap.find_opt x liveness_map with
         | Some(_, high) -> 
-          if high <= i.nb then 
+          if high < i.nb then 
             Nimp.({nb; instr=Expr(e)})  (*local dead set*)
           else 
             Nimp.({nb; instr=Set(x,e)}) (* local set (not dead)*)
