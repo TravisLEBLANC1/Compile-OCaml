@@ -117,7 +117,7 @@ let move r1 r2 = ins "move %s, %s"     r1 r2
 let nop = Nop
 let label (s: label) = S ( s ^ ":\n" )
 let syscall = S "\tsyscall\n"
-let comment s = S ("#" ^ s ^ "\n")
+let comment s = S ("\t#" ^ s ^ "\n")
 let asciiz s = ins ".asciiz %S" s
 let dword l = ins ".word %a" pr_ilist l
   

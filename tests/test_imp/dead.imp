@@ -1,0 +1,25 @@
+var global;
+
+
+function side_effect(){
+    global = global + 1;
+    return global;
+}
+
+function f(){
+    var dead;
+    var almost_dead;
+    almost_dead = 1;
+    dead = side_effect() + almost_dead;
+    almost_dead = side_effect();
+    return 0;
+}
+
+main{
+    global = 2;
+    putint(global);
+    putchar(10);
+    f();
+    putint(global);
+    putchar(10);
+}

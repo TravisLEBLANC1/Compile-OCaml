@@ -197,34 +197,40 @@ and tr_seq s ctx = match s with
     | i::s -> tr_instr i ctx @@ tr_seq s ctx
 
 
-let filter_code ncode liveness_map :Nimp.sequence = 
+let filter_code (nfdef:Nimp.function_def) liveness_map :Nimp.sequence = 
   let filter_instr i = match i with
     | Nimp.({nb; instr=Set(x,e)}) -> 
       begin
       match Liveness.VMap.find_opt x liveness_map with
         | Some(_, high) -> 
-          if high <= i.nb then 
-            Nimp.({nb; instr=Expr(e)}) 
+          if high <= i.nb then (
+            Nimp.({nb; instr=Expr(e)}) ) (*local dead set*)
           else 
-            Nimp.({nb; instr=Set(x,e)})
-        | None -> Nimp.({nb; instr=Expr(e)})
+            Nimp.({nb; instr=Set(x,e)}) (* local set (not dead)*)
+        | None -> 
+          if List.exists (fun y -> y=x) (nfdef.locals @ nfdef.params) then
+            Nimp.({nb; instr=Expr(e)}) (*local dead variable*)
+          else 
+            Nimp.({nb; instr=Set(x,e)}) (*global set (we should not erase it)*)
       end
     | _  -> i
   in 
-  List.map filter_instr ncode
+  List.map filter_instr nfdef.code
 
 let tr_function fdef =
   let nfdef = Nimp.from_imp_fdef fdef in
   let context, liveness_map = mk_allocation_context nfdef in
-  let filtered_code = Nimp.from_nimp_code (filter_code nfdef.code liveness_map) in
+  let filtered_code = Nimp.from_nimp_code (filter_code nfdef liveness_map) in
   push fp
   @@ push ra
   @@ addi fp sp 8
   @@ addi sp sp (-4 * context.spill_count)
   @@ save_var context.r_max
+  @@ comment "start code"
   @@ tr_seq filtered_code context
   (* @@ ici, erreur, on n'a pas croisé de return *)
   (* Pour éviter trop de corruption, on renvoie 0 *)
+  @@ comment "end code"
   @@ tr_cleaning context
   @@ li t0 0
   @@ jr ra

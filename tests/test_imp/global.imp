@@ -1,0 +1,14 @@
+var global;
+
+
+function side_effect(){
+    global = global + 1;
+}
+
+main{
+    global = 2;
+    global = global + 1;
+    putint(global);
+    side_effect();
+    putint(global);
+}
