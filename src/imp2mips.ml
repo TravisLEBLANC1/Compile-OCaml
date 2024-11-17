@@ -198,24 +198,29 @@ and tr_seq s ctx = match s with
 
 
 let filter_code (nfdef:Nimp.function_def) liveness_map :Nimp.sequence = 
-  let filter_instr i = match i with
+  let rec filter_instr i = match i with
     | Nimp.({nb; instr=Set(x,e)}) -> 
       begin
       match Liveness.VMap.find_opt x liveness_map with
         | Some(_, high) -> 
           if high <= i.nb then (
+            print_string ("erase"^x^"\n");
             Nimp.({nb; instr=Expr(e)}) ) (*local dead set*)
           else 
             Nimp.({nb; instr=Set(x,e)}) (* local set (not dead)*)
         | None -> 
-          if List.exists (fun y -> y=x) (nfdef.locals @ nfdef.params) then
-            Nimp.({nb; instr=Expr(e)}) (*local dead variable*)
+          if List.exists (fun y -> y=x) (nfdef.locals @ nfdef.params) then(
+            print_string ("erase"^x^"\n");
+            Nimp.({nb; instr=Expr(e)}) (*local dead variable*))
           else 
             Nimp.({nb; instr=Set(x,e)}) (*global set (we should not erase it)*)
       end
+    | Nimp.({nb; instr=While(e, li)}) -> Nimp.({nb; instr=While(e,filter_instr_list li)})
+    | Nimp.({nb; instr=If(e, li, li')}) -> Nimp.({nb; instr=If(e, filter_instr_list li,filter_instr_list li')})
     | _  -> i
+  and filter_instr_list li = List.map filter_instr li
   in 
-  List.map filter_instr nfdef.code
+  filter_instr_list nfdef.code
 
 let tr_function fdef =
   let nfdef = Nimp.from_imp_fdef fdef in

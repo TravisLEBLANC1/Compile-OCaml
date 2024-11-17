@@ -1,0 +1,35 @@
+var tmp_4;
+var e_3;
+var t_2;
+var closure_1;
+var deap_nested_0;
+
+function fun_0(param_t,closure) {
+  var t2_2;
+  var t1_1;
+  var var_match_0;
+
+  if ((((*param_t==0)&&(((*param_t[1]==0)&&(((**(param_t[1]+(1*4))==0)&&(((**(*(param_t[1]+(1*4))+(1*4))==0)&&(((**(*(*(param_t[1]+(1*4))+(1*4))+(1*4))==0)&&(**(*(*(*(param_t[1]+(1*4))+(1*4))+(1*4))+(1*4))==1))&&(**(*(*(*(param_t[1]+(1*4))+(1*4))+(1*4))+(2*4))==1)))&&(**(*(*(param_t[1]+(1*4))+(1*4))+(2*4))==1)))&&(**(*(param_t[1]+(1*4))+(2*4))==1)))&&(**(param_t[1]+(2*4))==1)))&&(*param_t[2]==1))) {
+    var_match_0 = 0;
+  } else {
+    if ((*param_t==1)) {
+      var_match_0 = 1;
+    } else {
+      t1_1 = param_t[1];
+      t2_2 = param_t[2];
+      var_match_0 = 2;
+    }
+  }
+  return(var_match_0);
+}
+
+main {
+  closure_1 = malloc((1*4));
+  *closure_1 = &fun_0;
+  deap_nested_0 = closure_1;
+  e_3 = malloc((1*4));
+  *e_3 = 1;
+  t_2 = e_3;
+  tmp_4 = deap_nested_0;
+  putint((**tmp_4)(t_2,tmp_4));
+}
