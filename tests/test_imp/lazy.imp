@@ -1,0 +1,19 @@
+var global;
+var x;
+
+function side_effect(){
+    global = global + 1;
+    return 1;
+}
+
+main{
+    global = 2;
+    if(6 <= 7 || side_effect()){
+        x = 6 > 7 && side_effect();
+        x = not x;
+    }else{
+        putint(2048);
+    }
+    putint(global); 
+    putchar(10);
+}

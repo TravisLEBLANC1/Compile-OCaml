@@ -1,0 +1,14 @@
+var x;
+function f(n){
+    var i;
+    i = 0;
+    while(i < n){
+        putint(i);
+        putchar(10);
+        i = i + 1;
+    }
+}
+
+main{
+    f(10);
+}
