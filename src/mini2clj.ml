@@ -102,7 +102,7 @@ let translate_program (p: Miniml.prog) =
         Clj.MkClj(fun_name, List.map (fun (x, _) -> convert_var x bvars) sorted_cvars)
 
       | Fix(f, _, e) ->
-        let res, _ = tr_expr e (VSet.add f bvars) in
+        let res = crawl e (VSet.add f bvars) in
         Fix(f, res)
 
       | App(e1, e2) ->
