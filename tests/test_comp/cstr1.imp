@@ -1,0 +1,88 @@
+var var_if_11;
+var tmp_10;
+var e_9;
+var e_8;
+var n_7;
+var e_6;
+var n_5;
+var t_4;
+var closure_3;
+var height_2;
+var closure_1;
+var max_0;
+
+function fun_2(param_x,closure) {
+  var closure_0;
+
+  closure_0 = malloc((2*4));
+  *closure_0 = &fun_1;
+  closure_0[1] = param_x;
+  return(closure_0);
+}
+
+function fun_1(param_y,closure) {
+  var var_if_0;
+
+  if ((closure[1]<param_y)) {
+    var_if_0 = param_y;
+  } else {
+    var_if_0 = closure[1];
+  }
+  return(var_if_0);
+}
+
+function fun_0(param_t,closure) {
+  var tmp_6;
+  var tmp_5;
+  var tmp_4;
+  var tmp_3;
+  var t2_2;
+  var t1_1;
+  var var_match_0;
+
+  if ((*param_t==0)) {
+    var_match_0 = 0;
+  } else {
+    t1_1 = param_t[1];
+    t2_2 = param_t[2];
+    tmp_5 = closure[1];
+    tmp_4 = closure[2];
+    tmp_6 = closure[1];
+    tmp_3 = (**tmp_4)((**tmp_5)(t1_1,tmp_5),tmp_4);
+    var_match_0 = (1+(**tmp_3)((**tmp_6)(t2_2,tmp_6),tmp_3));
+  }
+  return(var_match_0);
+}
+
+main {
+  closure_1 = malloc((1*4));
+  *closure_1 = &fun_2;
+  max_0 = closure_1;
+  closure_3 = malloc((3*4));
+  *closure_3 = &fun_0;
+  closure_3[1] = closure_3;
+  closure_3[2] = max_0;
+  height_2 = closure_3;
+  n_5 = malloc((3*4));
+  *n_5 = 1;
+  e_6 = malloc((1*4));
+  *e_6 = 0;
+  n_5[1] = e_6;
+  n_7 = malloc((3*4));
+  *n_7 = 1;
+  e_8 = malloc((1*4));
+  *e_8 = 0;
+  n_7[1] = e_8;
+  e_9 = malloc((1*4));
+  *e_9 = 0;
+  n_7[2] = e_9;
+  n_5[2] = n_7;
+  t_4 = n_5;
+  tmp_10 = height_2;
+  if (((**tmp_10)(t_4,tmp_10)>5)) {
+    var_if_11 = 2;
+  } else {
+    var_if_11 = 42;
+  }
+  putint(var_if_11);
+}
